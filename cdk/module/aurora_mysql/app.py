@@ -3,7 +3,7 @@ import os
 
 import aws_cdk as cdk
 
-from aurora_mysql import AuroraMysqlStack
+from stack_code import AuroraMysqlStack
 
 app = cdk.App()
 stack_name = app.node.try_get_context("stackName")
