@@ -1,0 +1,8 @@
+#git
+git_url: https://github.com
+git_project: DevOps-RV
+git_repo: aws
+
+#aws account
+region: us-east-2
+env: dev1

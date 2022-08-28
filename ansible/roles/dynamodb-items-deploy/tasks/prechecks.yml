@@ -1,0 +1,13 @@
+---
+- name: Verify file name provided
+  fail:
+    msg: "Please provide json file_name (eg: -e file_name=table-data)"
+  when: file_name is undefined
+
+- name: Install git
+  ansible.builtin.yum:
+    name:
+    - git
+    state: latest
+  when: ansible_os_family == "RedHat"
+  become: yes

@@ -1,0 +1,6 @@
+---
+- name: Deploy DynamoDB Table Items
+  hosts: localhost
+  connection: local
+  roles:
+    - dynamodb-items-deploy

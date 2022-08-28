@@ -1,0 +1,12 @@
+.idea
+**/*.pyc
+**/.vagrant
+*.log
+*.txt
+temp
+.DS_Store
+*.iml
+tests-local/
+!requirements.txt
+.vscode/
+**/*.temp

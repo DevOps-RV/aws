@@ -1,0 +1,79 @@
+---
+- name: prechecks
+  import_tasks: prechecks.yml
+
+- name: try
+  block:
+    - name: Create tmp workspace
+      tempfile:
+        path: /tmp
+        state: directory
+        suffix: scripts
+      register: dir
+
+    - name: "clone  {{ git_url }}/{{ git_project }}/{{ git_repo }}.git"
+      ansible.builtin.git:
+        repo: "{{ git_url }}/{{ git_project }}/{{ git_repo }}.git"
+        dest: "{{ dir.path }}"
+        version: "{{ branch | default ('master') }}"
+      register: responce
+
+    - name: copy dynamodb-items-deploy.py to "{{ dir.path }}"
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ dir.path }}"
+        mode: '0777'
+      loop:
+        - requirements.txt
+        - dynamodb-items-deploy.py
+
+    - name: call sts role
+      community.aws.sts_assume_role:
+        role_arn: "{{ dynamodb_env[region][env]['role_arn'] }}"
+        role_session_name: "DynamoDB_RoleSession"
+      register: assumed_role
+
+    - name: "Run dynamodb-items-deploy.py script {{ file_name }}"
+      ansible.builtin.shell: |
+        python3 -m venv .ve
+        source .ve/bin/activate
+        pip3 install -r requirements.txt 1>/dev/null
+        python3 dynamodb-items-deploy.py {{ file_name }}
+      args:
+        chdir: "{{ dir.path }}"
+      environment:
+        AWS_DEFAULT_REGION: "{{ region }}"
+        AWS_SESSION_TOKEN: "{{ assumed_role.sts_creds.session_token }}"
+        AWS_SECRET_ACCESS_KEY: "{{ assumed_role.sts_creds.secret_key }}"
+        AWS_ACCESS_KEY_ID: "{{ assumed_role.sts_creds.access_key }}"
+      register: responce
+      ignore_errors: True
+      no_log: True
+
+    - name: Success Items
+      ansible.builtin.debug:
+        var: responce.stdout_lines
+      
+    - name: Failed Items
+      ansible.builtin.debug:
+        var: responce.stderr_lines
+      when: responce.rc != 0
+
+    - name: Items Deploy Failed
+      ansible.builtin.debug:
+        msg:
+          - "---------------------------------------------------------------"
+          - "             DynamoDB Table Items Deploy Failed                "
+          - "             1. Check the above Failed Items log               "
+          - "             2. Please Verify the Json input file              "
+          - "---------------------------------------------------------------"
+      when: responce.rc != 0
+
+  always:
+    - name: cleanup tmp workspace
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ dir.path }}"
+      ignore_errors: true

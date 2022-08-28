@@ -1,0 +1,8 @@
+dynamodb_env:
+  us-east-2:
+    dev1:
+      role_arn: 'arn:aws:iam::12345678901:role/dynamodb-deploy-role'
+    dev2:
+      role_arn: 'arn:aws:iam::12345678902:role/dynamodb-deploy-role'
+    dev3:
+      role_arn: 'arn:aws:iam::12345678903:role/dynamodb-deploy-role'
