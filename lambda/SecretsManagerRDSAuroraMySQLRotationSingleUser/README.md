@@ -39,9 +39,9 @@ Amazon RDS Aurora-MySQL secret structure.
 python3 -m pip install -r requirements.txt -t .
 ```
 * Make the zip lambda_function.py and packages (pymysql, PyMySQL-XXX.dist-info) together
-* Create the lambda funtion uploading the zip file
+* Create the lambda function uploading the zip file
 * configure the vpc and security groups and set up Permissions for rotation.
-* Add rotation to the existing secret credentails
+* Add rotation to the existing secret credentials
 * Choose the above created lambda function
 * Make sure the rotation function can access both the secret and the database or other service. See Network access for the rotation function.
 * Try rotate secret immediately and verify
