@@ -1,0 +1,11 @@
+---
+# This is for testing poc in dev
+
+#existing parameters
+existing_security_groups: [dev-oh-rds-sg1,dev-oh-rds-sg2] #sg names
+existing_subnets: [dev-ec2-us-east-2a,dev-ec2-us-east-2b,dev-ec2-us-east-2c] #ec2 subnet names
+kms_key_alias: rds-kms-key #kms key alias name
+secret_rotation_lambda_name: SecretsManagerRDSAuroraMySQLRotationSingleUser
+
+#create a subnet group with above existing subnets
+db_subnet_group_name: dev-oh-rds-sng

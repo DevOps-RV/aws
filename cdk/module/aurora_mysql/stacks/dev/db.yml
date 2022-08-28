@@ -1,0 +1,33 @@
+---
+#Add Cluster info here
+
+mysql_clusters:
+
+  - db_cluster_identifier: dev-aurora-mysql-cluster11  #Name
+    family: aurora-mysql8.0 #aws rds describe-db-engine-versions --query "DBEngineVersions[].DBParameterGroupFamily
+    engine_version: 8.0.mysql_aurora.3.02.0 #https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Updates.Versions.html
+    db_engine_mode: provisioned #The serverless engine mode only supports Aurora Serverless v1. Currently, AWS CloudFormation doesn't support Aurora Serverless v2.
+    cluster_parameter_group_values:
+      'time_zone': 'UTC'
+      'performance_schema': '1'
+    no_of_instances: 1
+    db_instance_class: db.r5.large
+    instance_parameter_group_values:
+      'performance_schema': '1'
+    deletion_protection: False #True by deafult
+    database_name: "" #default 'release', "" - None, Update to change DB Name
+    #enable_cloudwatch_logs_exports: ['audit','error','general','slowquery'] #default #optional #update to modify
+    #backup_retention_period: 7 #default #optional
+    #preferred_backup_window: 00:30-01:30 #default #optional
+    #preferred_maintenance_window: Sun:02:00-Sun:03:00 #default #optional
+    #snapshot_identifier: arn:aws:rds:us-east-2:12345678901:dev-cluster2-snapshot:auroramysqlstack-snapshot-dev-aurora-mysql-cluster2-1234567 #ARN or Name
+    password_rotation_after_days: 1
+
+  # - db_cluster_identifier: dev-aurora-mysql-cluster2
+  #   family: aurora-mysql8.0
+  #   engine_version: 8.0.mysql_aurora.3.02.0
+  #   db_engine_mode: provisioned
+  #   cluster_parameter_group_values:
+  #     'time_zone': 'UTC'
+  #     'performance_schema': '1'
+  #   deletion_protection: False #True by deafult
