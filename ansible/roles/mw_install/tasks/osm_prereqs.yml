@@ -1,0 +1,177 @@
+---
+
+#OSM_DATA
+- name: check the tablespace OSM_DATA exist?
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = 'OSM_DATA';"
+  register: OSM_DATA_tablespace
+#  no_log: True
+
+- name: create tablespace OSM_DATA if not present
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "CREATE TABLESPACE OSM_DATA;"
+  when: "'OSM_DATA' not in OSM_DATA_tablespace.stdout"
+#  no_log: True
+
+- name: check the tablespace OSM_DATA created
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = 'OSM_DATA';"
+  when: "'OSM_DATA' not in OSM_DATA_tablespace.stdout"
+#  no_log: True
+
+- debug:
+    msg: "OSM_DATA tablespace is present"
+  when: "'OSM_DATA' in OSM_DATA_tablespace.stdout"
+
+#OSM_INDEX
+- name: check the tablespace OSM_INDEX exist?
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = 'OSM_INDEX';"
+  register: OSM_INDEX_tablespace
+#  no_log: True
+
+- name: create tablespace OSM_INDEX if not present
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "CREATE TABLESPACE OSM_INDEX;"
+  when: "'OSM_INDEX' not in OSM_INDEX_tablespace.stdout"
+#  no_log: True
+
+- name: check the tablespace OSM_INDEX created
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = 'OSM_INDEX';"
+  when: "'OSM_INDEX' not in OSM_INDEX_tablespace.stdout"
+#  no_log: True
+
+- debug:
+    msg: "OSM_INDEX tablespace is present"
+  when: "'OSM_INDEX' in OSM_INDEX_tablespace.stdout"
+
+#OSM_LARGE_INDEX
+- name: check the tablespace OSM_LARGE_INDEX exist?
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = 'OSM_LARGE_INDEX';"
+  register: OSM_LARGE_INDEX_tablespace
+#  no_log: True
+
+- name: create tablespace OSM_LARGE_INDEX if not present
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "CREATE TABLESPACE OSM_LARGE_INDEX;"
+  when: "'OSM_LARGE_INDEX' not in OSM_LARGE_INDEX_tablespace.stdout"
+#  no_log: True
+
+- name: check the tablespace OSM_LARGE_INDEX created
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = 'OSM_LARGE_INDEX';"
+  when: "'OSM_LARGE_INDEX' not in OSM_LARGE_INDEX_tablespace.stdout"
+#  no_log: True
+
+- debug:
+    msg: "OSM_LARGE_INDEX tablespace is present"
+  when: "'OSM_LARGE_INDEX' in OSM_LARGE_INDEX_tablespace.stdout"
+
+#OSM_LARGE_DATA
+- name: check the tablespace OSM_LARGE_DATA exist?
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = 'OSM_LARGE_DATA';"
+  register: OSM_LARGE_DATA_tablespace
+#  no_log: True
+
+- name: create tablespace OSM_LARGE_DATA if not present
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "CREATE TABLESPACE OSM_LARGE_DATA;"
+  when: "'OSM_LARGE_DATA' not in OSM_LARGE_DATA_tablespace.stdout"
+#  no_log: True
+
+- name: check the tablespace OSM_LARGE_DATA created
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = 'OSM_LARGE_DATA';"
+  when: "'OSM_LARGE_DATA' not in OSM_LARGE_DATA_tablespace.stdout"
+#  no_log: True
+
+- debug:
+    msg: "OSM_LARGE_DATA tablespace is present"
+  when: "'OSM_LARGE_DATA' in OSM_LARGE_DATA_tablespace.stdout"
+
+#User Precheck
+- name: "Check the {{ osm_db_admin_user }} user exist ?"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "SELECT * FROM ALL_USERS WHERE USERNAME='{{ osm_db_admin_user | upper }}';"
+  register: osm_db_admin_user_check
+#  no_log: True
+  tags: osm_precheck
+
+#- name: "Fail if {{ osm_db_admin_user }} user not exist"
+#  fail:
+#    msg:
+#      - "osm db user - {{ osm_db_admin_user }} do not exist"
+#      - "Plese check with DBA to create user {{ osm_db_admin_user }} with specific privileges"
+#  when: osm_db_admin_user | upper not in osm_db_admin_user_check.stdout
+#  tags: osm_precheck
+
+- name: "Create {{ osm_db_admin_user }} user if not exist ?"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "CREATE USER {{ osm_db_admin_user }} IDENTIFIED BY {{ osm_db_admin_password }} ACCOUNT UNLOCK;"
+  when: osm_db_admin_user | upper not in osm_db_admin_user_check.stdout
+#  no_log: True
+  tags: osm_precheck
+
+- name: "ALTER {{ osm_db_admin_user }} user if exist"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "ALTER USER {{ osm_db_admin_user }} IDENTIFIED BY {{ osm_db_admin_password }} ACCOUNT UNLOCK;"
+  when: osm_db_admin_user | upper in osm_db_admin_user_check.stdout
+#  no_log: True
+  tags: osm_precheck
+
+- name: copy osm sql scripts to {{ SCRIPT_HOME }}
+  template:
+    src: "osm/{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '0775'
+  loop:
+    - { src: osm_admin.sql.j2, dest: osm_admin.sql }
+    - { src: osm_user.sql.j2, dest: osm_user.sql }    
+  tags: osm_precheck
+
+- name: "Grants using admin user to {{ osm_db_admin_user }}"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} @{{ SCRIPT_HOME }}/osm_admin.sql > {{ LOGS_DIR }}/osm_admin.log
+#  no_log: True
+  tags: osm_precheck
+
+- name: "Grants using osm user to {{ osm_db_admin_user }}"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ osm_db_admin_user }}/{{ osm_db_admin_password }}@{{ DB_NAME }} @{{ SCRIPT_HOME }}/osm_user.sql > {{ LOGS_DIR }}/osm_user.log
+#  no_log: True
+  tags: osm_precheck
+
+- name: "Check the {{ osm_db_admin_user }} user privs"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ osm_db_admin_user }}/{{ osm_db_admin_password }}@{{ DB_NAME }} <<< "select * from {{ item }}='{{ osm_db_admin_user | upper }}';"
+  loop:
+    - 'USER_ROLE_PRIVS where USERNAME'
+    - 'USER_TAB_PRIVS where Grantee'
+    - 'USER_SYS_PRIVS where USERNAME'
+  register: osm_db_admin_user_privs_check
+  tags: osm_user_precheck
+
+- debug:
+    msg: "{{ osm_db_admin_user_privs_check }}"
+  tags: osm_user_precheck

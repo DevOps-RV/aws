@@ -1,0 +1,14 @@
+name='{{ MEDREC_SERVER }}'
+connect('{{ WEBLOGIC_USERNAME }}', '{{ WEBLOGIC_PASSWORD }}', 't3://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}')
+edit()
+startEdit()
+cd('/')
+cd('/Servers/' + name)
+cmo.setCluster(None)
+cmo.setMachine(None)
+editService.getConfigurationManager().removeReferencesToBean(getMBean('/Servers/' + name))
+
+cd('/')
+cmo.destroyServer(getMBean('/Servers/' + name))
+
+activate()

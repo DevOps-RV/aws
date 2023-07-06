@@ -1,0 +1,172 @@
+---
+# tasks file for oracle_client
+
+- name: Create oracle client install group
+  group:
+    name: "{{ oracle_install_group_name }}"
+    gid: "{{ oracle_install_group_id }}"
+    state: present
+
+- name: Create oracle user
+  user:
+    name: "{{ oracle_client_user }}"
+    group: "{{ oracle_client_group }}"
+    uid: "{{ oracle_user_id }}"
+    create_home: yes
+    shell: /bin/bash
+    state: present
+
+- name: Make sure oracle home owned by {{ oracle_client_user }}
+  file:
+    path: "/home/{{ oracle_client_user }}"
+    owner: "{{ oracle_client_user }}"
+    group: "{{ oracle_client_group }}"
+    recurse: yes
+
+- name: Copy oracle user bash profile
+  template:
+    src: "bash_profile.j2"
+    dest: /home/oracle/.bash_profile
+    mode: "0640"
+    owner: "{{ oracle_client_user }}"
+    group: "{{ oracle_client_group }}"
+
+- name: Create oracle home and base directories
+  file:
+    path: "{{ ora_clnt_dir }}"
+    state: directory
+    owner: "{{ oracle_client_user }}"
+    group: "{{ oracle_client_group }}"
+    mode: "0755"
+    recurse: yes
+  loop:
+    - "{{ oracle_client_path }}"
+    - "{{ oracle_client_home }}"
+    - "{{ oracle_client_base }}"
+    - "{{ oracle_client_tmp }}"
+    - "{{ oracle_client_download_dir }}"
+    - "{{ oracle_client_install_log }}"
+  loop_control:
+    loop_var: ora_clnt_dir
+
+- name: Download oracle client for linux zip file
+  get_url:
+    url: "{{ oracle_client_32bit_download_url }}"
+    dest: "{{ oracle_client_zip_path }}"
+  async: 1000
+  poll: 0
+  register: ora_clnt_dwnld
+
+- name: Wait until the download is completed
+  async_status:
+    jid: "{{ ora_clnt_dwnld.ansible_job_id }}"
+  register: ora_clnt_dwnld_result
+  until: ora_clnt_dwnld_result.finished
+  retries: 100
+  delay: 10
+
+- name: cleanup old extracts
+  ansible.builtin.file:
+    path: "{{ oracle_client_download_dir }}/client32"
+    state: absent
+  loop:
+    - "{{ oracle_client_zip_path }}"
+    - "{{ oracle_client_download_dir }}/client32"
+    
+- name: Download oracle client for linux zip file
+  shell: "wget --continue --progress=dot:mega --tries=0 {{ oracle_client_32bit_download_url }} -O {{ oracle_client_zip_path }}"
+  tags: ora_clnt_dwnld
+  async: 1000
+
+- name: Extract the downloaded oracle client archvie
+  unarchive:
+    src: "{{ oracle_client_zip_path }}"
+    dest: "{{ oracle_client_download_dir }}"
+    owner: "{{ oracle_client_user }}"
+    group: "{{ oracle_client_group }}"
+    mode: '0775'
+    remote_src: yes
+
+- name: Copy the oracle client response file
+  template:
+    src: oraclient_response.j2
+    dest: "{{ oracle_client_32bit_response }}"
+    mode: '775'
+    owner: "{{ oracle_client_user }}"
+    group: "{{ oracle_client_group }}"
+    backup: yes
+
+- name: Invoke runInstaller script
+  shell: |
+    export TMP={{ oracle_client_tmp }}
+    ./runInstaller -ignoreSysPrereqs \
+        -silent \
+        -responseFile {{ oracle_client_32bit_response }} \
+        | tee {{ oracle_client_install_log }}/runInstaller.log
+  async: 1000
+  become: yes
+  become_user: "{{ oracle_client_user }}"
+  args:
+    chdir: "{{ oracle_client_download_dir }}/client32"
+  register: client_installer_out
+  tags:
+    - run_installer
+
+- name: Get the ora install log file
+  shell: "ls -tr oraInstall*.out | tail -n1"
+  args:
+    chdir: "{{ oracle_client_inventory }}/logs/"
+  register: ora_install_log
+  tags:
+    - waiter
+
+- name: wait and search for sucsess message in the ora install log file
+  wait_for:
+    path: "{{ oracle_client_inventory }}/logs/{{ ora_install_log.stdout }}"
+    search_regex: (Successfully Setup Software.*)
+    timeout: 900
+  register: orainstall_waiter
+  tags:
+    - waiter
+
+- name: Display the matched lines in the ora install log file
+  debug:
+    msg: "{{ orainstall_waiter['match_groups'] }}"
+  tags:
+    - waiter
+
+- name: Run orainstRoot
+  shell: |
+    ./orainstRoot.sh | tee {{ oracle_client_install_log }}/orainstRoot.log
+  async: 1000
+  args:
+    chdir: "{{ oracle_client_inventory }}"
+    creates: /etc/oraInst.loc
+
+- name: Wait for the script compelte message in the orainstaRoot log
+  wait_for:
+    path: "{{ oracle_client_install_log }}/orainstRoot.log"
+    search_regex: The execution of the script is complete
+    timeout: 900
+
+- name: Copy tnsnames.ora file to oracle client home
+  template:
+    src: tnsnames.ora.j2
+    dest: "{{ oracle_client_home }}/network/admin/tnsnames.ora"
+    mode: '0775'
+    owner: "{{ oracle_client_user }}"
+    group: "{{ oracle_client_group }}"
+  tags:
+    - tnsnames
+
+- name: Setup oracle home and path in the global profile
+  template:
+    src: ora_profiled.j2
+    dest: /etc/profile.d/oracle-path.sh
+  become: yes
+  become_user: root
+  tags:
+    - profiled
+
+- debug:
+    msg: "Oraclient tasks complete"

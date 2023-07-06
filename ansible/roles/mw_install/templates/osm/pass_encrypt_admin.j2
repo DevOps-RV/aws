@@ -1,0 +1,18 @@
+#!/usr/bin/expect
+
+cd {{ DESIGN_STUDIO_HOME }}/headlessBuild
+
+set timeout 300
+spawn ant create-osm-admin-server-xmlie-encrypted-password-properties-file
+
+expect "*Please Enter the Admin User Name:"
+send "{{ WEBLOGIC_USERNAME }}\n"
+
+expect "Please enter the password for user wlsadmin:"
+send "{{ WEBLOGIC_PASSWORD }}\n"
+
+expect "Please enter the same password again for user wlsadmin:"
+send "{{ WEBLOGIC_PASSWORD }}\n"
+
+expect "BUILD SUCCESSFUL"
+exit 0

@@ -1,0 +1,42 @@
+#######################################################################################
+#
+#    This wlst script shows you how to remove a WebLogic Managed Server from a Cluster
+#    Note: The Managed Server must be stopped !
+#    Copyright (c) 2015 - 2017 by Tomoiu Paul Catalin, All Rights Reserved.
+#
+#######################################################################################
+ 
+connect('{{ WEBLOGIC_USERNAME }}', '{{ WEBLOGIC_PASSWORD }}', 't3://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}')
+print ''
+print '======================================================'
+print 'The script has been connected to the Admin Server'
+print '======================================================'
+print ''
+ 
+edit()
+startEdit()
+ 
+{% for host in groups[MW_HOSTS] %}
+{%- if loop.index > 1 %}
+cd('/Servers/{{ SUITE }}_MS{{ loop.index }}')
+cmo.setCluster(getMBean('/Clusters/{{ CLUSTER_NAME }}'))
+
+{% endif %}
+{% endfor %}
+
+cd('/Clusters/{{ CLUSTER_NAME }}/DynamicServers/{{ CLUSTER_NAME }}')
+cmo.setDynamicClusterSize(0)
+cmo.setMaxDynamicClusterSize(8)
+cmo.setServerNamePrefix('{{ CLUSTER_NAME }}')
+cmo.setIgnoreSessionsDuringShutdown(false)
+cmo.setCalculatedMachineNames(false)
+cmo.setDynamicClusterShutdownTimeoutSeconds(0)
+cmo.setWaitForAllSessionsDuringShutdown(false)
+cmo.setCalculatedListenPorts(true)
+cmo.setMachineMatchType('name')
+cmo.setMinDynamicClusterSize(1)
+cmo.setDynamicClusterCooloffPeriodSeconds(900)
+
+activate()
+ 
+# This is the end of the script

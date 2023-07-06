@@ -1,0 +1,15 @@
+# .bash_profile
+
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+        . ~/.bashrc
+fi
+
+# User specific environment and startup programs
+umask 027
+export JAVA_HOME={{ JAVA_HOME }}
+export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}
+export TNS_ADMIN=$ORACLE_HOME/network/admin
+export LD_LIBRARY_PATH=$ORACLE_HOME:$ORACLE_HOME/lib
+PATH=$ORACLE_HOME/bin:$JAVA_HOME/bin:$HOME/.local/bin:$HOME/bin:$PATH
+export PATH

@@ -1,0 +1,124 @@
+from java.io import FileInputStream
+from java.util import Properties
+import os
+
+TargetServerName='AdminServer'
+moduleDescriptorName='META-INF/weblogic-ra.xml'
+
+def aqadmModule():
+	print 'aqadmModule triggered'
+	propInputStream = FileInputStream("JMSConfiguration.properties")
+	configProps = Properties()
+	configProps.load(propInputStream)	
+	JMSFileStoreCount=configProps.get("aqadmFileStoreCount")
+	print JMSFileStoreCount,'total Connections in total'
+	print '========================================='
+	print 'Creating JMS Resources....'
+	print '========================================='
+	clusterName=configProps.get('clusterName')
+	print '****clusterName ='+clusterName
+	JMSSystemResource=configProps.get('aqadmSystemResource.1')
+	print '****JMSSystemResource ='+JMSSystemResource
+	SubDeployment=configProps.get('aqadmSubdeployment.1')
+	print '****SubDeployment ='+SubDeployment
+	total_saf_server_to_create = configProps.get('total.safServer')
+	Normal_type_Migrate=configProps.get('migrateServerType')
+	
+	total_Nodes_In_Cluster=configProps.get('total_Nodes_In_Cluster.1')
+	print '****total_Nodes_In_Cluster ='+total_Nodes_In_Cluster
+	print 'started creation'
+	try:
+		undo(defaultAnswer='y', unactivatedChanges='true')
+	except:
+		dumpStack()
+	edit()
+	startEdit()
+	clusterLoop=1
+	while (clusterLoop <= int(total_Nodes_In_Cluster)) :
+		try:
+			JMSFileStoreName=configProps.get('aqadmFileStoreName.'+str(clusterLoop))
+			print '****JMSFileStoreName ='+JMSFileStoreName+'....'+str(clusterLoop)
+			JMSFileStoreServerName=configProps.get('aqadmFileStoreServerName.'+str(clusterLoop))
+			print '****JMSFileStoreServerName ='+JMSFileStoreServerName+'....'+str(clusterLoop)
+			FileStore_SharedPath=configProps.get('fileStorePath.'+str(clusterLoop))
+			JMSServerName=configProps.get('aqadmServerName.'+str(clusterLoop))
+			print '****JMSServerName ='+JMSServerName+'....'+str(clusterLoop)
+			cd('/')
+			cmo.createFileStore(JMSFileStoreName)
+			cd('/FileStores/'+JMSFileStoreName)
+			cmo.setDirectory(FileStore_SharedPath)
+			set('Targets',jarray.array([ObjectName('com.bea:Name='+JMSFileStoreServerName+',Type='+Normal_type_Migrate)], ObjectName))
+			print '*****Executed createFileStore Successfully and targeted it to FileStoreLocation******'+JMSFileStoreName+','+FileStore_SharedPath
+			cd('/')
+			cmo.createJMSServer(JMSServerName)
+			print '*****Created JMS Server Successfully******'+JMSServerName
+			cd('/JMSServers/'+JMSServerName)
+			cmo.setPersistentStore(getMBean('/FileStores/'+JMSFileStoreName))
+			set('Targets',jarray.array([ObjectName('com.bea:Name='+JMSFileStoreServerName+',Type='+Normal_type_Migrate)], ObjectName))
+			print '***setPersistentStore successful***'+JMSServerName+','+JMSFileStoreName+','+JMSFileStoreServerName
+		except:
+			print 'Problem in reading values from properties File'
+		clusterLoop = clusterLoop + 1
+	print '***Created all filestores and JMS servers Specified in Properties file****'
+	cd('/')
+	cmo.createJMSSystemResource(JMSSystemResource)
+	cd('/JMSSystemResources/'+JMSSystemResource)
+	set('Targets',jarray.array([ObjectName('com.bea:Name='+clusterName+',Type=Cluster')], ObjectName))
+	cd('/JMSSystemResources/'+JMSSystemResource)
+	cmo.createSubDeployment(SubDeployment)
+	cd('/JMSSystemResources/'+JMSSystemResource+'/SubDeployments/'+SubDeployment)
+	print 'Subdeployment Getting Targeted to JMS servers'
+	JMSServerCount=configProps.get('total_Nodes_In_Cluster.1')
+	print 'Subdeployment Getting Targeted to JMS servers... '+ JMSServerCount +'...total JMS servers found'
+	if JMSServerCount=='1':
+		JMSServerTargetName1=configProps.get('aqadmServerName.1')
+		print 'Targeting subdeployment to ...'+JMSServerTargetName1
+		set('Targets',jarray.array([ObjectName('com.bea:Name='+JMSServerTargetName1+',Type=JMSServer')], ObjectName))
+	elif JMSServerCount=='2':
+		JMSServerTargetName1=configProps.get('aqadmServerName.1')
+		JMSServerTargetName2=configProps.get('aqadmServerName.2')
+		print 'Targeting subdeployment to ...'+JMSServerTargetName1+','+JMSServerTargetName2
+		set('Targets',jarray.array([ObjectName('com.bea:Name='+JMSServerTargetName1+',Type=JMSServer'),ObjectName('com.bea:Name='+JMSServerTargetName2+',Type=JMSServer')], ObjectName))
+	elif JMSServerCount=='3':
+		JMSServerTargetName1=configProps.get('aqadmServerName.1')
+		JMSServerTargetName2=configProps.get('aqadmServerName.2')
+		JMSServerTargetName3=configProps.get('aqadmServerName.3')
+		print 'Targeting subdeployment to ...'+JMSServerTargetName1+','+JMSServerTargetName2+','+JMSServerTargetName3
+		set('Targets',jarray.array([ObjectName('com.bea:Name='+JMSServerTargetName1+',Type=JMSServer'),ObjectName('com.bea:Name='+JMSServerTargetName2+',Type=JMSServer'),ObjectName('com.bea:Name='+JMSServerTargetName3+',Type=JMSServer')], ObjectName))
+	elif JMSServerCount=='4':
+		JMSServerTargetName1=configProps.get('aqadmServerName.1')
+		JMSServerTargetName2=configProps.get('aqadmServerName.2')
+		JMSServerTargetName3=configProps.get('aqadmServerName.3')
+		JMSServerTargetName4=configProps.get('aqadmServerName.4')
+		print 'Targeting subdeployment to ...'+JMSServerTargetName1+','+JMSServerTargetName2+','+JMSServerTargetName3+','+JMSServerTargetName4
+		set('Targets',jarray.array([ObjectName('com.bea:Name='+JMSServerTargetName1+',Type=JMSServer'),ObjectName('com.bea:Name='+JMSServerTargetName2+',Type=JMSServer'),ObjectName('com.bea:Name='+JMSServerTargetName3+',Type=JMSServer'),ObjectName('com.bea:Name='+JMSServerTargetName4+',Type=JMSServer')], ObjectName))
+	b=1
+        while (b <= int(total_Nodes_In_Cluster)):
+
+            try:
+                cd('/')
+                SAFServerName=configProps.get('SAFServer.'+ str(b))
+                FileStoreName=configProps.get('aqadmFileStoreName.'+ str(b))
+                TargetServer=configProps.get('aqadmFileStoreServerName.'+ str(b))
+                cmo.createSAFAgent(SAFServerName)
+                cd('/SAFAgents/'+ SAFServerName)
+                cmo.setStore(getMBean('/FileStores/'+ FileStoreName))
+                set('Targets',jarray.array([ObjectName('com.bea:Name='+ TargetServer+',Type='+Normal_type_Migrate)], ObjectName))
+		#print 'JMSServer: "', SAFServerName,'" is created'
+            except:
+
+                b=b+1
+def main():
+	propInputStream1 = FileInputStream("JMSConfiguration.properties")
+	domainProps = util.Properties()
+	domainProps.load(propInputStream1)
+	adminURL='t3://'+domainProps.get('domain.AdminIP')+':'+domainProps.get('domain.AdminPort')
+	adminUserName=domainProps.get('domain.AdminUser')
+	adminPassword=domainProps.get("domain.AdminPasswd")
+	connect(adminUserName, adminPassword, adminURL)
+	aqadmModule()
+disconnect()
+
+main()
+save()
+activate()

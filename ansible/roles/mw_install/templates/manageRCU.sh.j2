@@ -1,0 +1,29 @@
+#!/bin/bash
+export ORACLE_HOME={{ ORACLE_HOME }}
+export JAVA_HOME={{ JAVA_HOME }}
+
+
+if [ -f passwdfile ]; then
+   rm passwdfile
+fi
+
+for component in {% for item in RCU_COMPONENT[SUITE] %}{{ item }}{{ " " if not loop.last }}{% endfor %}; do
+   echo "{{ RCU_SCHEMA_PASSWORD }}" >> passwdfile
+done
+
+echo "***CREATING RCU SCHEMAS***"
+
+sh -c "{{ ORACLE_HOME }}/oracle_common/bin/rcu -silent -createRepository \
+-databaseType ORACLE \
+-connectString {{ DB_HOST_NAME }}:{{ DB_PORT }}/{{ DB_NAME }} \
+-dbUser {{ SYSDB_USER }} \
+-dbRole {{ SYSDB_USER_ROLE }} \
+-honorOMF true \
+-useSamePasswordForAllSchemaUsers true \
+-schemaPrefix {{ RCU_SCHEMA_PREFIX }} \
+{% for item in RCU_COMPONENT[SUITE] %}
+-component {{ item }} -tablespace {{ DB_TABLESPACE }} -tempTablespace TEMP \
+{% endfor %}
+-f < ./passwdfile"
+
+#rm passwdfile

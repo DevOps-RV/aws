@@ -1,0 +1,63 @@
+
+---
+- hosts: "{{ host }}"            
+  become_user: root
+  tasks:
+    - name: Enable X11
+      block:      
+        - name: Install Xauth Packages
+          ansible.builtin.yum:
+            name: 
+              - xauth
+              - xorg-x11-xauth
+              - xclock
+              - xterm
+              - libXtst
+            state: present
+    
+        - name: sshd_config | Enabling X11 Forwarding  
+          ansible.builtin.lineinfile:
+            dest: /etc/ssh/sshd_config
+            regexp: "{{ item.regexp }}"
+            line: "{{ item.line }}"
+            backup: yes
+          loop:
+            - { regexp: '^X11Forwarding', line: 'X11Forwarding yes' }
+            - { regexp: '^X11UseLocalhost', line: 'X11UseLocalhost no' }      
+          notify:
+            - restart_sshd
+    
+        - name: Create .Xauthority file
+          ansible.builtin.file:
+            path: "/home/{{ item }}/.Xauthority"
+            state: touch
+          become_user: "{{ item }}"
+          loop:
+            - ec2-user
+            - oracle
+            - siebel
+
+      tags: enable_x11
+
+    - name: Disable X11
+      block:
+        - name: sshd_config | Disable X11 Forwarding  
+          ansible.builtin.lineinfile:
+            dest: /etc/ssh/sshd_config
+            regexp: "{{ item.regexp }}"
+            line: "{{ item.line }}"
+            backup: yes
+          loop:
+            - { regexp: '^X11Forwarding', line: 'X11Forwarding no' }
+#            - { regexp: '^X11UseLocalhost', line: 'X11UseLocalhost no' }      
+          notify:
+            - restart_sshd
+
+      tags: disable_x11      
+
+  handlers:
+    - name: restart_sshd
+      ansible.builtin.service:
+          name: sshd
+          state: restarted
+          enabled: true

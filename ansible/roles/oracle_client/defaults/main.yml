@@ -1,0 +1,19 @@
+---
+# defaults file for oracle_client
+oracle_client_path: /opt/oracle
+oracle_client_home: "{{ oracle_client_path }}/client"
+oracle_client_base: "{{ oracle_client_path }}/base"
+oracle_client_inventory: "{{ oracle_client_path }}/oraInventory"
+oracle_client_tmp: "{{ oracle_client_path }}/tmp"
+oracle_client_user: "oracle"
+oracle_client_group: "oinstall"
+oracle_client_download_dir: "/opt/sw_downloads"
+oracle_client_32bit_zip: "32bit_LINUX_193000_client.zip"
+oracle_client_zip_path: "{{ oracle_client_download_dir }}/{{ oracle_client_32bit_zip }}"
+oracle_client_32bit_download_url: "{{ artifactory_base_url }}/binaries/IP21/{{ oracle_client_32bit_zip }}"
+oracle_client_32bit_response: "/opt/sw_downloads/32bit_client.rsp"
+# add 64 bit later
+oracle_client_64bit_zip: " "
+
+# logs file location for the installer
+oracle_client_install_log: "/opt/ansi_ora_logs"

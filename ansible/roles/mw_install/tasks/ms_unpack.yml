@@ -1,0 +1,101 @@
+---
+#AppD PreReq
+
+- name: AppD JavaAgent check
+  stat:
+    path: "{{ appd_home }}/appdJavaAgent/javaagent.jar"
+  register: javaagent
+  become_user: root
+  failed_when: not javaagent.stat.exists
+
+- name: download {{ SUITE }}_{{ ENV }}_domain_template.jar
+  get_url:
+    url: "{{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ SUITE }}_{{ ENV }}_domain_template.jar"
+    dest: "{{ SCRIPT_HOME }}/{{ SUITE }}_{{ ENV }}_domain_template.jar"
+    mode: '+x'
+
+- name: "Managed Server Unpack using Template"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_HOME }}
+    export oh={{ ORACLE_HOME }}
+    {{ ORACLE_HOME }}/oracle_common/common/bin/unpack.sh -template={{ SCRIPT_HOME }}/{{ SUITE }}_{{ ENV }}_domain_template.jar -domain={{ M_SERVER }}/{{ DOMAIN_NAME }} > {{ LOGS_DIR }}/unpack.log
+  async: 500
+
+- name: "Wait until the string succeed is in the file {{ LOGS_DIR }}/unpack.log before continuing"
+  wait_for:
+    path: "{{ LOGS_DIR }}/unpack.log"
+    search_regex: "succeed: close template"
+
+- debug:
+    msg: "Succeed write to Domain. unpack completed on Managed Server: {{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}"
+
+- name: create security folder in mserver
+  file:
+    path: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/security"
+    state: directory
+    mode: '750'
+  
+- name: Copy boot.properties | setUserOverrides.sh
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: '750'
+    backup: yes
+  loop:
+    - { src: boot.properties.j2, dest: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/security/boot.properties" }
+    - { src: setUserOverrides_manager.j2, dest: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/setUserOverrides.sh" }
+  tags: ms_login
+
+- name: update SecureListener=false in MServer nodemanager.properties
+  lineinfile:
+    path: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.properties"
+    regexp: '^SecureListener=.*'
+    line: 'SecureListener=false'
+    backup: yes
+  tags: SecureListener
+
+- name: AIA | invoke SCEApp.sh
+  shell: ./SCEApp.sh {{ ORACLE_HOME }} > {{ LOGS_DIR }}/SCEApp.log
+  args:
+    chdir: "{{ AIA_HOME }}/comms_home/src/SCEApp/"
+  when: (SUITE == "AIA") and (inventory_hostname not in groups[MW_HOSTS][0])
+  
+- name: AIA | Verify Jar file exists after SCEApp.sh Operation
+  stat:
+    path: "{{ AIA_HOME }}/comms_home/src/SCEApp/oracle.soa.fp_template.jar"
+  register: jar
+  when: (SUITE == "AIA") and (inventory_hostname not in groups[MW_HOSTS][0])
+  failed_when: not jar.stat.exists
+
+- name: copy soa folder from Admin Server to Manager Server
+  copy:
+    src: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/soa"
+    dest: "{{ M_SERVER }}/{{ DOMAIN_NAME }}"
+    remote_src: yes
+  when: SUITE == "AIA"
+
+- name: start node startNodeManager.sh in Managed Server
+  shell: "nohup {{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/startNodeManager.sh &"
+  async: 120
+
+- name: "Wait until the string socket listener started in {{ M_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.log"
+  wait_for:
+    path: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.log"
+    search_regex: "socket listener started"
+    timeout: 1200
+
+- debug:
+    msg: "startNodeManager.sh in Managed Server started"
+
+- name: start startManagedWebLogic.sh in Managed Server
+  shell: "nohup {{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/startManagedWebLogic.sh {{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} &"
+  async: 120
+
+- name: "Wait until the string Server state changed to RUNNING in {{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+  wait_for:
+    path: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+    search_regex: "Server state changed to RUNNING"
+    timeout: 1200
+
+- debug:
+    msg: "{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} Server Started successfully"

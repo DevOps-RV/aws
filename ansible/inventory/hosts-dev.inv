@@ -1,0 +1,27 @@
+#Middleware
+[aia_dev]
+aiahost1
+aiahost2
+
+[osb_dev]
+osbhost1  path=dev
+osbhost2  path=dev
+
+[osm_dev]
+osmhost1
+osmhost2
+
+[soa_dev]
+soahost1
+soahost2
+
+[odi_dev]
+odihost1
+odihost2
+
+[mw_dev:children]
+soa_dev
+osm_dev
+aia_dev
+osb_dev
+odi_dev

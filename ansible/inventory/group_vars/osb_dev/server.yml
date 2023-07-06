@@ -1,0 +1,6 @@
+---
+USER_ALLOW_GROUP: middlewareuser
+ADMIN_ALLOW_GROUP: middlewaresuperuser
+RAM: 7000
+CPU: 2
+SWAP: 1000

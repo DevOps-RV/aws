@@ -1,0 +1,184 @@
+################################################################################
+#
+# InstallShield Options File Template
+#
+# Wizard name: Setup
+# Wizard source: OSMInstall.jar
+# Created on: Wed Dec 07 10:41:22 EST 2005
+# Created by: InstallShield Options File Generator
+#
+# This file can be used to create an options file (i.e., response file) for the
+# wizard "Setup". Options files are used with "-options" on the command line to
+# modify wizard settings.
+#
+# The settings that can be specified for the wizard are listed below. To use
+# this template, follow these steps:
+#
+#    1. Enable a setting below by removing leading '###' characters from the
+#    line (search for '###' to find settings you can change).
+#
+#    2. Specify a value for a setting by replacing the characters '<value>'.
+#    Read each settings documentation for information on how to specify its
+#    value.
+#
+#    3. Save the changes to the file.
+#
+#    4. To use the options file with the wizard, specify -options <file-name>
+#    as a command line argument to the wizard, where <file-name> is the name
+#    of this options file.
+#
+################################################################################
+
+################################################################################
+# The Order and Service Management Configuration file name
+#
+-W loadConfiguration.configurationFile="install_cfg.xml"
+
+################################################################################
+#
+# Order and Service Management 7 Install Location
+#
+# The install location of the product. Specify a valid directory into which the
+# product should be installed. If the directory contains spaces, enclose it in
+# double-quotes. For example, to install the product to C:\Program Files\My
+# Product, use
+#
+###-P installLocation="C:\Program Files\OSM"
+#
+-P installLocation="{{ osm_install_location }}"
+
+################################################################################
+# Logging Option
+#
+# The parameters have the following definitions:
+#
+# # - Echoes the display to standard output.
+# !<filename> - The name of a file to save the log information in.
+# If you specify "!" without a file name, the default log file name is used.
+# @<event-type>;<event-type> - A list of the events to log.
+# "ALL" enables the logging of all events; "NONE" disables logging and
+# clears the log file.
+#
+# It is strongly recommended that the <filename> is set to:
+#     <installLocation>/InstallLog.txt
+#
+-log # !{{ osm_install_log }} @ALL
+
+################################################################################
+# Remove Options
+#
+# The following two settings instruct the Order and Service Management Installer
+# to always remove files that are modified after installation in uninstallation.
+# It is recommended that these settings are not changed.
+#
+-P compsvrupd.removeOption=1
+-P compadm.removeOption=1
+
+################################################################################
+# Replace Options
+#
+# This setting instructs the Order and Service Management Installer to always replace the files
+# that are "newer" with the "older" files released in the Order and Service Management Installer.
+# It is recommended that this setting is not changed.
+#
+-G replaceNewerResponse="yesToAll"
+
+################################################################################
+#
+# Setup Type
+#
+# The setup type to be used when installing the product. Legal values are:
+#
+#    Typical - Typical Installation: Installs a Order and Service Management Database Schema
+#              and the Order and Service Management Server.
+#    Custom  - Custom Installation: Allows you to select the components to
+#              install. Recommended for advanced users.
+#
+# For example, to specify that the "Custom Installation" setup type is
+# selected, use the following two together
+#
+-V IS_SELECTED_INSTALLATION_TYPE=Custom
+-W setupTypes.active=false
+#
+# to specify that the "Typical Installation" setup type is
+# selected, use
+#
+#    -V IS_SELECTED_INSTALLATION_TYPE=Typical
+#
+# If you do not specify the selected setup type, it is defaulted to Typical
+# Installation.
+#
+
+################################################################################
+#
+# "Database Schema" Feature
+#
+# The selection state of the "Database Schema" feature. Legal values are:
+#
+#    true  - Indicates that the feature is selected for installation
+#    false - Indicates that the feature is not selected for installation
+#
+# For example, to select "Database Schema" for installation, use
+#
+#    -P featureds.active=true
+#
+-P featureds.active=true
+
+################################################################################
+#
+# "Server" Feature
+#
+# The selection state of the "Server" feature. Legal values are:
+#
+#    true  - Indicates that the feature is selected for installation
+#    false - Indicates that the feature is not selected for installation
+#
+# For example, to select "Server" for installation, use
+#
+#    -P featuresvr.active=true
+#
+-P featuresvr.active=true
+
+################################################################################
+#
+# "SDK Tools" Feature
+#
+# The selection state of the "SDK Tools" feature. Legal values are:
+#
+#    true  - Indicates that the feature is selected for installation
+#    false - Indicates that the feature is not selected for installation
+#
+# For example, to select "SDK Tools" for installation, use
+#
+#    -P featuresdkt.active=true
+#
+-P featuresdkt.active=true
+
+#######
+#
+#    true  - Indicates that the feature is selected for uninstallation
+#    false - Indicates that the feature is not selected for uninstallation
+#
+###-P featuresdkt.activeForUninstall=true
+
+################################################################################
+#
+# "SDK Samples" Feature
+#
+# The selection state of the "SDK Samples" feature. Legal values are:
+#
+#    true  - Indicates that the feature is selected for installation
+#    false - Indicates that the feature is not selected for installation
+#
+# For example, to select "SDK Samples" for installation, use
+#
+#    -P featuresdks.active=true
+#
+-P featuresdks.active=true
+
+#######
+#
+#    true  - Indicates that the feature is selected for uninstallation
+#    false - Indicates that the feature is not selected for uninstallation
+#
+### -P featuresdks.activeForUninstall=<value>

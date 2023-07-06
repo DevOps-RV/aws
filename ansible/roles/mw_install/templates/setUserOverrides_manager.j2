@@ -1,0 +1,43 @@
+#!/bin/sh
+
+umask 027
+
+# Custom variables
+DOMAIN_NAME={{ DOMAIN_NAME }}
+DOMAIN_HOME={{ M_SERVER }}/{{ DOMAIN_NAME }}
+
+# Enabled monitoring, unlocking commercial features
+MONITOR_ARGS="-XX:+UnlockCommercialFeatures -XX:+FlightRecorder"
+
+
+# Standard managed server memory settings
+MS_MEM_SIZE="{{ MSXMXXMS }}G"
+MS_MEM_ARGS="-Xms${MS_MEM_SIZE} -Xmx${MS_MEM_SIZE}"
+STD_MEM_ARGS="-d64 -Xss1024k"
+
+JAVA_OPTIONS="${JAVA_OPTIONS} -Djava.security.egd=file:///dev/./urandom -Dweblogic.UseEnhancedIncrementAdvisor=false -Djava.io.tmpdir={{ ORACLE_TMP }}"
+
+#appdynamics
+JAVA_OPTIONS="${JAVA_OPTIONS} -javaagent:/opt/appd/appdynamics/appdJavaAgent/javaagent.jar -Dappdynamics.socket.collection.bci.enable=true -Dappdynamics.agent.applicationName={{ appdynamics['applicationName'] }} -Dappdynamics.agent.tierName={{ appdynamics['tierName'] }} -Dappdynamics.agent.nodeName={{ appdynamics['tierName'] }}-0{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}"
+
+# Garbage Collection related settings
+GC_ARGS="-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:InitiatingHeapOccupancyPercent=60 -XX:ParallelGCThreads=4 -XX:SurvivorRatio=8 -XX:TargetSurvivorRatio=75 -XX:NewRatio=3 -XX:-UseGCOverheadLimit -XX:+HeapDumpOnOutOfMemoryError -XX:+PrintClassHistogram -XX:+PrintGCDateStamps -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintTenuringDistribution -verbose:gc -XX:HeapDumpPath={{ BACKUP_PATH }}/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/  -Xloggc:{{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}gc.log -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=10M"
+
+#GC_DIAG_ARGS="-XX:HeapDumpPath=${DOMAIN_HOME}/servers/${SERVER_NAME}/logs -Xloggc:${DOMAIN_HOME}/servers/${SERVER_NAME}/logs/${SERVER_NAME}-gc-$(date +%Y%m%d_%H%M).log"
+GC_ARGS="${GC_ARGS} ${GC_DIAG_ARGS}"
+
+# Custom arguments including SSL Args
+CUST_ARGS="-XX:+UseTLAB -Djavax.net.debug=ssl:handshake:verbose -Dssl.debug=true -Dweblogic.security.SSL.protocolVersion=TLS1"
+
+# Managed Servers
+USER_MEM_ARGS="${STD_MEM_ARGS} ${MS_MEM_ARGS} ${MEM_DEV_ARGS} ${MONITOR_ARGS} ${GC_ARGS} ${CUST_ARGS} ${CA_ARGS}"
+export USER_MEM_ARGS
+
+# Set DERBY_FLAG
+DERBY_FLAG="false" ; export DERBY_FLAG
+
+# Java VM to server
+JAVA_VM="-server" ; export JAVA_VM
+
+export JAVA_OPTIONS
+

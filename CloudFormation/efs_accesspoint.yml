@@ -1,0 +1,46 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates EFS access point
+Parameters:
+  FileSystemID:
+    Type: String
+    Description: "EFS file system ID"
+  UserId:
+    Type: String
+  GroupId:
+    Type: String
+  FileSystemPath:
+    Type: String
+  SecondaryGroupIds:
+    Type: CommaDelimitedList
+    Default: ""
+  Permissions:
+    Type: String
+    Default: "0775"
+Conditions:
+  SecondaryProvided: !Not
+    - !Equals
+      - !Join ["", !Ref SecondaryGroupIds]
+      - ''
+Resources:
+  AccessPointResource:
+    Type: 'AWS::EFS::AccessPoint'
+    DeletionPolicy: "Retain"
+    UpdateReplacePolicy: "Retain"
+    Properties:
+      FileSystemId: !Ref FileSystemID
+      PosixUser:
+        Uid: !Ref UserId
+        Gid: !Ref GroupId
+        SecondaryGids: !If [ SecondaryProvided, !Ref SecondaryGroupIds, !Ref "AWS::NoValue" ]
+      RootDirectory:
+        CreationInfo:
+          OwnerUid: !Ref UserId
+          OwnerGid: !Ref GroupId
+          Permissions: !Ref Permissions
+        Path: !Ref FileSystemPath
+Outputs:
+  AccessPointID:
+    Value: !GetAtt AccessPointResource.AccessPointId
+  AccessPointArn:
+    Value: !GetAtt AccessPointResource.Arn

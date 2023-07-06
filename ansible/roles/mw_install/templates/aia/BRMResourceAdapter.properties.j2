@@ -1,0 +1,27 @@
+#*****************************************************
+# Environment details
+#*****************************************************
+ADMIN_USERNAME = {{ WEBLOGIC_USERNAME }}
+ADMIN_PASSWORD = {{ WEBLOGIC_PASSWORD }}
+ADMIN_URL = t3://{{ inventory_hostname }}:{{ MW_ADMIN_PORT }}
+CLUSTER_NAME = {{ CLUSTER_NAME }}
+
+##*****************************************************
+##   BRM JCA Adapter Configurations                   *
+##*****************************************************
+ 
+##Do not change##
+rarLocation = {{ CLUSTER }}/deployplan/BRMAdapter/OracleBRMJCA15Adapter.rar
+planFile = {{ CLUSTER }}/plan.xml
+appName = OracleBRMJCA15Adapter
+moduleDescriptorName = META-INF/weblogic-ra.xml
+eisName = eis/BRM
+##Adapter Configuration Properties##
+BRMConnectionPoolTimeout = 10000
+ConnectionString = ip {{ BRM_PRIMARY_CM_HOST }} {{ BRM_PRIMARY_CM_PORT }}
+BRMConnectionPoolMaxsize = 5000
+AverageOpcodeCount = 5
+MultiDB = true
+ZeroEpochAsNull = true
+BRMConnectionPoolMinsize = 0
+transactionMode = XA_TRANSACTION

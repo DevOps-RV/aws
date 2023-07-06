@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#***VARIABLES***
+
+# Declare JAVA_HOME
+export jh={{ JAVA_HOME }}
+# Declare ORACLE_HOME
+export oh={{ ODI_HOME }}
+export MW_HOME=/opt/oracle/odi
+echo "*******************"
+echo "***Create Domain***"
+echo "*******************"
+#{{ ODI_HOME }}/oracle_common/common/bin/wlst.sh {{ SCRIPT_HOME }}/createODIDomain.py > {{ LOGS_DIR }}/ODIdomainpy.log
+
+. {{ ODI_HOME }}/oracle_common/common/bin/setWlstEnv.sh &&
+java weblogic.WLST {{ SCRIPT_HOME }}/createODIDomain.py  > {{ LOGS_DIR }}/{{ SUITE }}domainpy.log

@@ -1,0 +1,54 @@
+from java.io import FileInputStream
+
+propInputStream = FileInputStream("{{ SCRIPT_HOME }}/createUsersAndGroups.properties")
+
+configProps = Properties()
+configProps.load(propInputStream)
+
+
+domainName=configProps.get("domain.name")
+adminURL=configProps.get("admin.url")
+adminUserName=configProps.get("admin.userName")
+adminPassword=configProps.get("admin.password")
+realmName=configProps.get("security.realmName")
+
+
+totalGroups_to_Create=configProps.get("total.groups")
+totalUsers_to_Create=configProps.get("total.username")
+
+
+connect(adminUserName, adminPassword, adminURL)
+serverConfig()
+
+authenticatorPath= '/SecurityConfiguration/' + domainName + '/Realms/' + realmName + '/AuthenticationProviders/DefaultAuthenticator'
+print authenticatorPath
+
+cd(authenticatorPath)
+
+print''
+print 'Adding Group Membership to the Users:'
+print''
+
+y=1
+
+while (y <= int(totalUsers_to_Create)):
+    grpNames = configProps.get("create.user.groups."+ str(y)).split(",")
+
+    userName = configProps.get("create.user.name."+ str(y))
+    usrName=''
+
+    for grpName in grpNames:
+
+        if grpName=='':
+
+            print 'USER:' , usrName , 'Added to GROUP: ' , grpName
+
+        else:
+
+            cmo.addMemberToGroup(grpName,userName)
+
+            print ''
+
+            print 'USER:' , userName , 'Added to GROUP: ' , grpName
+
+    y = y + 1

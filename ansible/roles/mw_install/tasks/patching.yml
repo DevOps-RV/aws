@@ -1,0 +1,75 @@
+---
+#Patch History
+- name: get patches applied
+  command: "{{ OPATCH_HOME }}/opatch lsinv -oh {{ ORACLE_HOME }}"
+  register: applied_patches
+  changed_when: false
+  check_mode: no
+  tags: ['patch_verify','apply_patch','rollback_patch']
+
+- name: print patches applied
+  debug:
+    var: applied_patches.stdout_lines
+  tags: ['patch_verify','apply_patch','rollback_patch']
+
+#Download Patch
+- name: create {{ OPATCH_HOME }}/PATCH_TOP directory
+  file:
+    path: "{{ OPATCH_HOME }}/{{ item }}"
+    state: "directory"
+    mode: '0775'
+    owner: oracle
+    group: oinstall
+  loop:
+    - PATCH_TOP
+    - "{{ LOGS_DIR }}"
+  when: PATCH_LIST[SUITE] is defined
+  tags: ['apply_patch','rollback_patch']
+  
+- name: unarchive {{ SUITE }} Patches
+  unarchive:
+    src: "{{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/patch/{{ item }}.tar.gz"
+    dest: "{{ OPATCH_HOME }}/PATCH_TOP/"
+    mode: +x
+    remote_src: yes
+  loop: "{{ PATCH_LIST[SUITE] }}"
+  when: PATCH_LIST[SUITE] is defined
+  tags: ['apply_patch','rollback_patch']
+
+#Apply Patch
+- name: Apply {{ SUITE }} Patches
+  shell: |
+    cd {{ OPATCH_HOME }}/PATCH_TOP/'{{ item }}'
+    {{ OPATCH_HOME }}/opatch apply -oh {{ ORACLE_HOME }} -silent | tee {{ LOGS_DIR }}/'{{ item }}'Patch.log
+  register: PATCH_STATUS
+  loop: "{{ PATCH_LIST[SUITE] }}"
+  when: PATCH_LIST[SUITE] is defined
+  ignore_errors: True
+  tags: apply_patch
+
+#Rollback Patch
+#- name: Rollback Patch
+#  block:
+##    - name: unarchive {{ SUITE }} Patches
+##      unarchive:
+##        src: "{{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/patch/{{ item }}.tar.gz"
+##        dest: "{{ OPATCH_HOME }}/PATCH_TOP/"
+##        mode: +x
+##        remote_src: yes
+##      loop: "{{ PATCH_LIST[SUITE] }}"
+##      when: PATCH_LIST[SUITE] is defined
+#    
+#    - name: Remove {{ SUITE }} Patches
+#      shell: |
+#        cd {{ OPATCH_HOME }}/PATCH_TOP/'{{ item }}'
+#        {{ OPATCH_HOME }}/opatch apply -oh {{ ORACLE_HOME }} -silent | tee {{ LOGS_DIR }}/'{{ item }}'Patch.log
+#      register: PATCH_STATUS
+#      loop: "{{ PATCH_LIST[SUITE] }}"
+#      when: PATCH_LIST[SUITE] is defined
+#      ignore_errors: True
+#
+#    - ansible.builtin.debug:
+#        var: PATCH_STATUS.stdout_lines
+#
+#  when: rollback_patch | default(False)
+#  tags: [ 'never', 'rollback_patch' ]

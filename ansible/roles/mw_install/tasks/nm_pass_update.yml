@@ -1,0 +1,22 @@
+---
+- name: Copy NMPassUpdate.py files to the {{ SCRIPT_HOME }}
+  template:
+    src: NMPassUpdate.j2
+    dest: "{{ SCRIPT_HOME }}/NMPassUpdate.py"
+    mode: '0775'
+
+- name: "invoke NMPassUpdate.py with WLST to update nodemanager password"
+  shell: |
+    . ./setWlstEnv.sh
+    java weblogic.WLST {{ SCRIPT_HOME }}/NMPassUpdate.py > {{ LOGS_DIR }}/NMPassUpdate.log
+  args:
+    chdir: "{{ ORACLE_HOME }}/oracle_common/common/bin/"
+
+- name: Wait until the string "completed" is in the file {{ LOGS_DIR }}/NMPassUpdate.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/NMPassUpdate.log"
+    search_regex: completed
+
+- name: "Node Manager Password Updated"
+  debug:
+    msg: "Node Manager Password Updated"

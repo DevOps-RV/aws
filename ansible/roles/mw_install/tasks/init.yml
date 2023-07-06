@@ -1,0 +1,155 @@
+---
+#init.d automation
+
+- name: Cleanup '/home/oracle/OSService_WLS'
+  file:
+    path: /home/oracle/OSService_WLS
+    state: absent
+
+- name: Create directory '/home/oracle/OSService_WLS'
+  file:
+    path: /home/oracle/OSService_WLS
+    state: directory
+    owner: oracle
+    group: oinstall
+    mode: 0775
+    recurse: yes
+  register: create_dir
+
+- name: Copy wlsadmin Initd script to rc.d folder
+  copy:
+    src: "init.d/wlsadmin.service"
+    dest: /etc/init.d/wlsadmin
+    owner: root
+    group: root
+    mode: '0755'
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: yes
+  tags:
+    - copy_initd
+    - initd
+
+- name: Copy managedserver Initd
+  copy:
+    src: "init.d/{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - { src: managedserver.service, dest: /etc/init.d/managedserver }
+    #- { src: fetchserverstate.sh, dest: /home/oracle/OSService_WLS }
+  tags:
+    - copy_initd
+    - initd
+
+# added below task on 02/08/22
+- name: place fetchserverstate.sh file in /home/oracle/OSService_WLS path from the template
+  template:
+    src: "{{ role_path }}/files/init.d/fetchserverstate.sh"
+    dest: "/home/oracle/OSService_WLS/fetchserverstate.sh"
+    mode: '0755'
+    owner: oracle
+    group: oinstall
+    backup: yes
+  register: place_fetchserverstate
+  tags:
+    - copy_initd
+    - initd
+
+- debug:
+    msg: "{{ place_fetchserverstate }}"
+  tags:
+    - copy_initd
+    - initd
+
+- name: Copy domain_properties & serverstate /home/oracle/OSService_WLS
+  template:
+    src: "init.d/{{ item.src }}"
+    dest: "/home/oracle/OSService_WLS/{{ item.dest }}"
+    mode: '0755'
+    owner: oracle
+    group: oinstall
+    backup: yes
+  loop:
+    - { src: domain_properties.j2, dest: domain.properties }
+    - { src: serverstate.py.j2, dest: serverstate.py }
+
+- name: Reload systemd daemon
+  shell: systemctl daemon-reload
+
+- name: Running chkconfig commands for to 'add' and turn 'on' the service 'wlsadmin'
+  shell: |
+    chkconfig --add wlsadmin;
+    chkconfig --level 345 wlsadmin on
+  register: chkconfig_aserver
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: yes
+  tags:
+    - install_init.d_scripts
+    - turn_on_service
+
+- debug:
+    msg: "{{ chkconfig_aserver }}"
+  run_once: yes
+  tags:
+    - install_init.d_scripts
+    - turn_on_service
+
+- name: Running chkconfig commands for to 'add' and turn 'on' the service 'managedserver'
+  shell: |
+    chkconfig --add managedserver
+    chkconfig managedserver on
+  register: chkconfig_mserver
+  tags:
+    - install_init.d_scripts
+    - turn_on_service
+
+- debug:
+    msg: "{{ chkconfig_mserver }}"
+  tags:
+    - install_init.d_scripts
+    - turn_on_service
+
+## Turn off the scripts
+#- name: Turn 'off' the service 'wlsadmin'
+#  shell: chkconfig wlsadmin off
+#  register: chkconfig_aserver_off
+#  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+#  run_once: yes
+#  tags:
+#    - turn_off_service
+#
+#- debug:
+#    msg: "{{ chkconfig_aserver_off }}"
+#  run_once: yes
+#  tags:
+#    - turn_off_service
+#
+#- name: Turn 'off' the service 'managedserver'
+#  shell: chkconfig managedserver off
+#  register: chkconfig_mserver_off
+#  tags:
+#    - turn_off_service
+#
+#- debug:
+#    msg: "{{ chkconfig_mserver_off }}"
+#  tags:
+#    - turn_off_service
+#
+## Status of the scripts as OS service.
+#- name: Status of the scripts as OS service
+#  shell: |
+#    chkconfig --list | grep 'wlsadmin'
+#    chkconfig --list | grep 'managedserver'
+#  register: chkconfig_list
+#  ignore_errors: yes
+#  tags:
+#    - always
+#    - chkconfig_list
+#
+#- debug:
+#    msg: "{{ chkconfig_list }}"
+#  tags:
+#    - always
+#    - chkconfig_list

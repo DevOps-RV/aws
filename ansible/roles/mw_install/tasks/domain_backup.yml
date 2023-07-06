@@ -1,0 +1,28 @@
+---
+- name: Create {{ BACKUP_PATH }} if not present
+  file:
+    path: "{{ item }}"
+    state: "directory"
+    owner: oracle
+    group: oinstall
+    mode: "0755"
+    recurse: yes
+  loop:
+    - "{{ BACKUP_PATH }}"
+
+- name: Backup {{ DOMAIN_HOME }} to {{ BACKUP_PATH }}/fmw_domains_{{ inventory_hostname_short }}.tar.gz
+  shell: "tar --warning=file-changed --warning=file-removed -czf {{ BACKUP_PATH }}/fmw_domains_{{ inventory_hostname_short }}.tar.gz fmw_domains"
+  args:
+    chdir: "{{ ORACLE_PATH }}/"
+  async: 2000
+  ignore_errors: true
+  register: tar
+
+- name: Backup osm to {{ BACKUP_PATH }}/osm_{{ inventory_hostname_short }}.tar.gz
+  shell: "tar --warning=file-changed --warning=file-removed -czf {{ BACKUP_PATH }}/osm_{{ inventory_hostname_short }}.tar.gz osm"
+  args:
+    chdir: "{{ ORACLE_PATH }}/"
+  async: 2000
+  ignore_errors: true
+  register: tar
+  when: SUITE == "OSM"

@@ -1,2 +1,91 @@
 ---
 git_url: https://github.com
+# Variables for all envs
+artifactory_host: 
+artifactory_base_url: "https://{{ artifactory_host }}/artifactory"
+artifactory_user: 
+artifactory_username: "{{ artifactory_user }}"
+bitbucket_host: 
+oracle_install_group_name: "oinstall"
+oracle_install_group_id: 1002
+oracle_user_id: 1002
+oracle_user: "oracle"
+
+efs_rpm_url: "{{ artifactory_base_url }}/rpms/amazon-efs-utils-1.31.2-1.el7_9.noarch.rpm"
+
+#AppD
+appd_install_group_name: "{{ oracle_install_group_name }}"
+appd_install_group_id: "{{ oracle_install_group_id }}"
+appd_user_id: "{{ oracle_user_id }}"
+appd_user: "{{ oracle_user }}"
+appd_mount: /opt/appd
+appd_home: "{{ appd_mount }}/appdynamics"
+appd_artifactory_home: "{{ artifactory_base_url }}/list/appd_agents"
+
+#LoadBalancersURLs
+load_balancer:
+  dev:
+    aia: 
+    crm: 
+    osb: 
+    osm: 
+
+#EM13c
+OMS_HOST: 
+EM_UPLOAD_PORT: 4903
+b_startAgent: true
+AGENT_BASE_DIR: /opt/oracle/oms_agent
+AGENT_HOME: "{{ AGENT_BASE_DIR }}/agent_13.5.0.0.0"
+AGENT_INSTANCE_HOME: "{{ AGENT_BASE_DIR }}/agent_inst"
+AGENT_PORT: 3872
+AGENT_ZIP: 13.5.0.0.0_AgentCore_226.zip
+
+rds_oracle:
+  dev:
+    aia:
+      db_hostname:
+      db_name:
+    crm:
+      db_hostname:
+      db_name:
+    osb:
+      db_hostname:
+      db_name:
+    osm:
+      db_hostname:
+      db_name:
+    brm:
+      db_hostname:
+      db_name:
+  stg:
+    aia:
+      db_hostname:
+      db_name:
+    crm:
+      db_hostname: 
+      db_name: 
+    osb:
+      db_hostname: 
+      db_name:
+    osm:
+      db_hostname:
+      db_name:
+    brm:
+      db_hostname: 
+      db_name: 
+  int: 
+    aia:
+      db_hostname: 
+      db_name: 
+    crm:
+      db_hostname: 
+      db_name: 
+    osb:
+      db_hostname: 
+      db_name: 
+    osm:
+      db_hostname: 
+      db_name: 
+    brm:
+      db_hostname: 
+      db_name: 

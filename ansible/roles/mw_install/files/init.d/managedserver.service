@@ -1,0 +1,227 @@
+#!/bin/bash
+# chkconfig: 35 99 04
+
+# Source the domain.properties file
+. /home/oracle/OSService_WLS/domain.properties
+
+#lockfile
+lockfile=/var/lock/subsys/managedserver
+
+start() {
+
+    # Check if the $MS is running. Exit the script if its already running on this node.
+    x=$(ps -ef | grep java | grep $MS | wc -l)
+    if [[ $x -ge 1 ]]; then
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>ManagedServer is already running on this instance with PID: $MS_PID <<<***************"
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "***************>>>ManagedServer is already running on this instance with PID: $MS_PID <<<***************" >> $MS_logFile
+      #failure
+      echo
+      return 1
+    fi
+
+    # Check if the NodeManager OOTB startup, the WLST script, and the WLST helper script exist. If not, the script exits and sends out an email notification.
+    if [ ! -f $NM_START_SCRIPT -o ! -f $wlst -o ! -f $MS_START_SCRIPT -o ! -f $fetchserverstate -o ! -f $serverstate ]
+    then
+        echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "********************************>>>Server startup script stopped abruptly as some of the startup helper scripts do not exist. Please check the log and take necessary action. Sending email notification as well. <<<*************************"
+        echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "********************************>>>Server startup script stopped abruptly as some of the startup helper scripts do not exist. Please check the log and take necessary action. Sending email notification as well. <<<*************************" >> $MS_logFile
+        echo -e "ManagedServer start-up script stopped abruptly on $HOSTNAME at $(date +%b\ %d,\ %Y\ "%r"\ %Z) \n\n Reason: Some of the startup helper scripts do not exist. Please verify the start/stop WLST helper scripts and take necessary action" | mail -s "[ WebLogic restart script notification ] [$env] ManagedServer start-up script stopped abruptly on $HOSTNAME " $To
+        echo
+        return 3
+    fi
+
+    # Check the AdminServer state by calling the custom WLST scripts.
+    AdminState=$(sh $fetchserverstate | grep 'AdminServer' | grep 'Current state of' | awk '{print $6}')
+    if [[ "$AdminState" == "RUNNING" ]] || [[ "$AdminState" == "WARNING" ]]; then
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>AdminServer state is: $AdminState <<<***************"
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>AdminServer state is: $AdminState <<<***************" >> $MS_logFile
+    fi
+
+    # Exit the script if the AdminServer is not running - sends email notification as well.
+    if [[ ! $AdminState =~ ^(RUNNING|WARNING)$ ]]; then
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>AdminServer is not RUNNING. ManagedServer Startup script ended adruptly. Please startup the AdminServer before proceeding with the ManagedServer startup. Sending mail notification as well. <<<***************"
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>AdminServer is not RUNNING. ManagedServer Startup script ended adruptly. Please startup the AdminServer before proceeding with the ManagedServer startup. Sending mail notification as well. <<<***************" >> $MS_logFile
+      echo -e "ManagedServer script has ended abruptly on $HOSTNAME as AdminServer is not Running on this domain. Notification timestamp: $(date +%b\ %d,\ %Y\ "%r"\ %Z). Please startup the AdminServer before proceeding with the ManagedServer startup" | mail -s " [ WebLogic restart script notification ] [$env] ManagedServer script has ended abruptly on $HOSTNAME " $To
+      echo
+      return 3
+    fi
+
+    # Check if NM is up and running on this node. If not start the Nodemanager
+    nm=$(ps -ef | grep java | grep weblogic.NodeManager | wc -l)
+    if [[ $nm -ge 1 ]]; then
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>NM is already running on this instance with PID: $NM_PID <<<***************"
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>NM is already running on this instance with PID: $NM_PID <<<***************" >> $MS_logFile
+    fi
+
+    # Start the NM as its not running.
+    if [[ $nm == 0 ]]; then
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>Starting the Node Manager as its not running on this node <<<***************"
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>Starting the Node Manager as its not running on this node <<<***************" >> $MS_logFile
+      /bin/su - $ORACLE_USER -c "nohup sh $NM_START_SCRIPT >> $MS_logFile 2>&1 &"
+      while [ $SECONDS -lt $NM_WAIT ]; do
+        read -t 10 line
+        echo "$line" | egrep "$NM_Startup_Line" > /dev/null 2>&1
+        if [ $? = 0 ]
+        then
+          NM_PID=`ps -ef | grep java | grep weblogic.NodeManager | awk '{print $2}'`
+          echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>NodeManager started successfully on this instance with PID: $NM_PID <<<****"
+          echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>NodeManager started successfully on this instance with PID: $NM_PID <<<****" >> $MS_logFile
+        fi
+        done  <  <(tail -n 3 -f "$MS_logFile")
+
+    fi
+
+    # Start the Managed Server only if the AdminServer and the NM is up and running
+    echo -e "\n\n***************************************************************************************************************************" >> $MS_logFile
+    echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>Starting ManagedServer..<<<***************"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "***************>>>Starting ManagedServer..<<<***************" >> $MS_logFile
+    echo "***************************************************************************************************************************" >> $MS_logFile
+    echo -e "ManagedServer start script has been initiated on $HOSTNAME at $(date +%b\ %d,\ %Y\ "%r"\ %Z)" | mail -s " [ WebLogic restart script notification ] [$env] ManagedServer start script has been initiated on $HOSTNAME " $To
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Start script Mail notification sent to: $To <<<*******"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Start script Mail notification sent to: $To <<<*******" >> $MS_logFile
+    # Clear tmp and cache before starting up the ManagedServer.
+    rm -rf $MS_path/tmp
+    rm -rf $MS_path/cache
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Removed tmp and cache folders <<<*****"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Removed tmp and cache folders <<<*****" >> $MS_logFile
+    /bin/su - $ORACLE_USER -c "nohup sh $MS_START_SCRIPT $MS $t3 >> $MS_logFile 2>&1 &"
+    launched=false
+    # Begin loop to tail the logfile to search for server_start_up line.
+    while [ $SECONDS -lt $STARTUP_WAIT ]; do
+      read -t 10 line
+      echo "$line" | egrep "$MS_Startup_Line" > /dev/null 2>&1
+      if [ $? = 0 ]
+      then
+        sleep 5
+        rm -f $LB_STATUS_FILE
+        MS_PID=`ps -ef | grep java | grep $MS | awk '{print $2}'`
+        echo -e "\n***************************************************************************************************************************" >> $MS_logFile
+        echo -e "ManagedServer started successfully on $HOSTNAME with PID:$MS_PID at $(date +%b\ %d,\ %Y\ "%r"\ %Z). Node has been added to the LB rotation. For complete log events check $MS_logFile on the remote host." | mail -s " [ WebLogic restart script notification ] [$env] ManagedServer started successfully on $HOSTNAME " $To
+        echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>ManagedServer started successfully on this instance with PID: $MS_PID. Node has been added to the LB rotation. <<<****"
+        echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>ManagedServer started successfully on this instance with PID: $MS_PID. Node has been added to the LB rotation. <<<****" >> $MS_logFile
+        echo "***************************************************************************************************************************" >> $MS_logFile
+        touch $lockfile
+        launched=true
+        #success
+        echo
+        return 0
+        exit 0
+      fi
+    done  <  <(tail -n 3 -F "$MS_logFile")
+    sleep 2
+    # Exit the script with a failure if the ManagedServer dosen't start within the $STARTUP_WAIT time.
+    if [[ $SECONDS -ge $STARTUP_WAIT ]]; then
+    echo -e "\n***************************************************************************************************************************" >> $MS_logFile
+    echo -e "ManagedServer did not start within $STARTUP_WAIT seconds on $HOSTNAME. Notification timestamp: $(date +%b\ %d,\ %Y\ "%r"\ %Z). Please check the log file: $MS_logFile to take further action" | mail -s " [ WebLogic restart script notification ] [$env] ManagedServer did not startup within $STARTUP_WAIT seconds on $HOSTNAME " $To
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>ManagedServer did not start within $STARTUP_WAIT seconds<<<****"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>ManagedServer did not start within $STARTUP_WAIT seconds<<<****" >> $MS_logFile
+    echo "***************************************************************************************************************************" >> $MS_logFile
+    launched=false
+    #failure
+    echo
+    return 1
+    exit 1
+    fi
+}
+
+stop() {
+
+  # grep for 'ManagedServer' process
+  x=$(ps -ef | grep java | grep $MS | wc -l)
+  # else return failure
+  if [[ $x == 0 ]]; then
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "**********>>>ManagedServer is NOT running on this instance <<<**********"
+    echo
+    return 3
+  fi
+  # display the pid if its running
+  if [[ $x -ge 1 ]]; then
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "**********>>>ManagedServer is running on this instance with PID: $MS_PID <<<**********"
+    echo "*************************************************************************************************************************************" >> $MS_logFile
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stopping ManagedServer<<<*******"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stopping ManagedServer<<<*******" >> $MS_logFile
+    echo "*************************************************************************************************************************************" >> $MS_logFile
+    echo -e "ManagedServer stop script has been initiated on $HOSTNAME at $(date +%b\ %d,\ %Y\ "%r"\ %Z). For complete log events check $MS_logFile on the remote host" | mail -s " [ WebLogic restart script notification ] [$env] ManagedServer stop script has been initiated on $HOSTNAME " $To
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stop script Mail notification sent to: $To <<<*******"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stop script Mail notification sent to: $To <<<*******" >> $MS_logFile
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Taking the node out of LB rotation before stopping the server <<<*******"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Taking the node out of LB rotation before stopping the server  <<<*******" >> $MS_logFile
+    touch $LB_STATUS_FILE
+    chown oracle:oinstall $LB_STATUS_FILE
+    echo "*******>>> $HOSTNAME has been removed out of LB <<<****" >> $MS_logFile
+    ls -lrt $LB_STATUS_FILE_LOC | grep status >> $MS_logFile
+    /bin/su - $ORACLE_USER -c "nohup sh $MS_STOP_SCRIPT $MS $t3 >> $MS_logFile 2>&1 &"
+    sleep 300
+  fi
+
+    #validating if the ManagedServer is down. If not, killing the MS PID
+    x=$(ps -ef | grep java | grep $MS | wc -l)
+        if [ $x -ge 1 ]
+          then
+            MS_PID=`ps -ef | grep java | grep $MS | awk '{print $2}'`
+            NM_PID=`ps -ef | grep java | grep weblogic.NodeManager | awk '{print $2}'`
+            echo "***>>>ManagedServer is still running on this node on PID: $MS_PID . Killing the PID to stop the service<<<***"
+            echo "***>>>ManagedServer is still running on this node on PID: $MS_PID. Killing the PID to stop the service <<<***" >> $MS_logFile
+            su - $ORACLE_USER -c "kill -9 $NM_PID"
+            sleep 2
+            su - $ORACLE_USER -c "kill -9 $MS_PID"
+        fi
+    rm -f $lockfile
+    echo "*************************************************************************************************************************************" >> $MS_logFile
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Exiting ManagedServer stop script<<<*******"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Exiting ManagedServer stop script<<<*******" >> $MS_logFile
+    echo "*************************************************************************************************************************************" >> $MS_logFile
+    echo
+    return 0
+    exit 0
+}
+
+reload() {
+        stop
+        wait
+        sleep 10
+        start
+}
+
+restart() {
+        stop
+        wait
+        sleep 10
+        start
+}
+
+status() {
+
+  # Check the AdminServer state by calling the custom WLST scripts.
+  MSState=$(sh $fetchserverstate | grep $MS | grep 'Current state of' | awk '{print $6}')
+  #ServerState=$(sh $fetchserverstate | grep -wns 'Admin port should be used instead' -A 10)
+  echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>Current state of '$MS' : $MSState <<<***************"
+
+}
+
+case "$1" in
+start)
+        start
+        ;;
+
+stop)
+        stop
+        ;;
+
+reload)
+        reload
+        ;;
+
+restart)
+        restart
+        ;;
+
+status)
+        status
+        ;;
+*)
+
+echo $"Usage: $0 {start|stop|reload|restart|status}"
+exit 1
+esac
+
+exit $?

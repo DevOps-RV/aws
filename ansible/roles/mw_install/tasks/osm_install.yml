@@ -1,0 +1,92 @@
+---
+
+- name: OSM | PreReqs
+  import_tasks: osm_prereqs.yml
+  tags: osm_prereqs
+
+- name: OSM | Create Jdk7 dir
+  file:
+    state: directory
+    path: "{{ item }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '750'
+  loop:
+    - "{{ osm_jdk7_base }}"
+  become: yes
+  become_user: root
+  tags:
+    - jdk7
+
+- name: OSM | Install JDK7 for the OSM installer
+  unarchive:
+    src: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/jdk-7u80-linux-x64.tar.gz"
+    dest: "{{ osm_jdk7_base }}"
+    remote_src: yes
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '755'
+  tags:
+    - jdk7
+
+- name: OSM | Check java7 version
+  shell: |
+    {{ osm_jdk7_base }}/jdk1.7.0_80/bin/java -version
+  register: java7_out
+  tags:
+    - jdk7
+
+- name: OSM | Display Java7 output
+  debug:
+    var: java7_out.stderr_lines
+  tags:
+    - jdk7
+
+- name: OSM | Render OSM repsonse files
+  template:
+    src: "osm/{{ item.src }}"
+    dest: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/{{ item.dest }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '755'
+  loop:
+    - { src: 'install_cfg.xml.j2', dest: 'install_cfg.xml' }
+    - { src: 'installOptions.txt.j2', dest: 'installOptions.txt' }
+  tags:
+    - osm_install_rsp_render
+    - osm_installer
+
+- name: OSM | Run Installer
+  shell: |
+    export JAVA_HOME={{ osm_jdk7_base }}/jdk1.7.0_80
+    export PATH={{ osm_jdk7_base }}/jdk1.7.0_80/bin:$PATH
+    ./osm_7.4.1.0.3_InstallLinux.bin \
+      -is:tempdir {{ osm_install_temp_dir }} \
+      -is:log {{ osm_install_launch_log }} \
+      -is:javahome {{ osm_jdk7_base }}/jdk1.7.0_80/ \
+      -options installOptions.txt -silent
+  async: 3000
+  become: yes
+  become_user: oracle
+  register: osm_installer_out
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}"
+  tags:
+    - osm_installer
+
+- name: Wait for the BUILD SUCCESSFUL message in {{ osm_install_location }}/InstallLog.txt
+  wait_for:
+    path: "{{ osm_install_location }}/InstallLog.txt"
+    search_regex: "{{ item }}"
+    timeout: 900
+  register: osm_wait_job_out
+  loop:
+    - '(BUILD SUCCESSFUL)'
+    - '(BUILD SUCCESSFUL)'
+  tags:
+    - osm_installer
+
+- debug:
+    msg: "OSM INSTALLATION COMPLETED"
+  tags:
+    - osm_installer

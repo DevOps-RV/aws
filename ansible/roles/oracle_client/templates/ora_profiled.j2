@@ -1,0 +1,6 @@
+# User specific environment and startup programs
+export ORACLE_HOME={{ oracle_client_home }}
+export TNS_ADMIN=$ORACLE_HOME/network/admin
+export LD_LIBRARY_PATH=$ORACLE_HOME:$ORACLE_HOME/lib
+PATH=$ORACLE_HOME/bin:$PATH
+export PATH

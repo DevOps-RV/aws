@@ -1,0 +1,15 @@
+#!/bin/bash
+
+export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+
+#Default users created by OSM Installation
+OSMORDER=(
+    OSMORDER
+    OSMORDER_REPORTS
+    OSMORDER_RULE
+    )
+
+for USERS in ${OSMORDER[*]}
+    do
+        sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "DROP USER $USERS CASCADE;"
+    done

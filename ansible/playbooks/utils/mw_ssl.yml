@@ -1,0 +1,110 @@
+---
+- hosts: "{{ mw_inventory }}"
+  gather_facts: no
+  run_once: yes
+  become_user: oracle
+  vars:
+    keyalias: "{{ mw_inventory }}"
+    keystorename: keystore.jks
+    csr: "{{ mw_inventory }}.csr"
+    region: ohio
+    keytool_cmd: "/opt/oracle/jdk/bin/keytool"
+  tasks:
+    - name: block
+      block:
+        - name: Fail if mw_inventory is not given
+          fail:
+            msg: "Pls provide the mw_inventory"
+          when: mw_inventory is undefined
+
+        - name: Chek host names in inventory
+          fail:
+            msg: "Invalid host names"
+          when: "not {{ item.endswith('.net') }}"
+          loop: "{{ groups[mw_inventory] }}"
+
+        - name: Create tmp workspace for certs
+          tempfile:
+            path: /tmp
+            state: directory
+            suffix: svcDir
+          register: svcDir
+
+        - name: Set DNS names from the inventory
+          set_fact:
+            san_names: >-
+              {%- for h in groups[mw_inventory] -%}
+              DNS:{{ h }}{{ loop.last | ternary('',',') }}
+              {%- endfor -%}
+
+        - debug:
+            var: san_names
+
+        - name: Genrerate KEY name - {{ keystorename }}
+          shell: |
+            {{ keytool_cmd }} -genkey -alias {{ keyalias }} \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 36500 \
+              -sigalg SHA256withRSA \
+              -keystore {{ svcDir.path }}/{{ keystorename }} \
+              -dname "CN={{ groups[mw_inventory][0] }},OU=Rv,O='DevOps', L=Alpharetta, ST=GA, C=US" \
+              -ext ExtendedKeyUsage="serverAuth,clientAuth" \
+              -ext SAN="{{ san_names }}" \
+              -storepass {{ mw_keystore_password }} \
+              -keypass {{ mw_keystore_password }} \
+              -noprompt
+          args:
+            chdir: "{{ svcDir.path }}"
+
+        - name: Generate CSR - {{ keystorename }}
+          shell: |
+            {{ keytool_cmd }} -certreq -alias {{ keyalias }} \
+              -file {{ csr }} \
+              -ext ExtendedKeyUsage=serverAuth,clientAuth \
+              -ext SAN="{{ san_names }}" \
+              -keystore {{ svcDir.path }}/{{ keystorename }} \
+              -storepass {{ mw_keystore_password }}
+          args:
+            chdir: "{{ svcDir.path }}"
+
+        - name: Upload files to artifactory
+
+          shell: |
+            CHECKSUM=$(md5sum {{ item }} | awk '{ print $1 }')
+            curl --header "X-Checksum-MD5:${CHECKSUM}" \
+              -u{{ artifactory_user }}:{{ artifactory_password }} \
+              -T ./{{ item }} \
+              {{ artifactory_base_url }}/ssl-certs/{{ region }}/{{ mw_inventory }}/{{ item }}
+          loop:
+            - "{{ keystorename }}"
+            - "{{ csr }}"
+          register: upload
+          args:
+            chdir: "{{ svcDir.path }}"
+
+        - debug:
+            msg: "{{ upload }}"
+
+        - name: Show download url
+          vars:
+            msg: |
+              Pls use the following link to download
+              ##### CSR Download url ###
+              {{ artifactory_base_url }}/ssl-certs/{{ region }}/{{ mw_inventory }}/{{ csr }}
+              ##########################
+              Note: only CSR is needed for cert request
+              JKS: {{ artifactory_base_url }}/ssl-certs/{{ region }}/{{ mw_inventory }}/{{ keystorename }}
+              Browse all: {{ artifactory_base_url }}/ssl-certs/{{ region }}/{{ mw_inventory }}
+          debug:
+            msg: "{{ msg.split('\n') }}"
+          tags:
+            - show_url
+
+      always:
+      - name: Clean up tmp dir
+        file:
+          state: absent
+          path: "{{ svcDir.path }}"
+        ignore_errors: yes
+

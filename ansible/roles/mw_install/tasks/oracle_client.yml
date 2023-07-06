@@ -1,0 +1,83 @@
+---
+- name: create database oraclientInventory directory
+  file:
+    path: "{{ ORACLE_PATH }}/{{ item }}"
+    state: "directory"
+    owner: oracle
+    group: oinstall
+    mode: '775'
+  loop:
+    - database
+    - client
+
+- name: unarchive {{ ORABIN_PATH }}/{{ MW_VERSION }}/{{ ORACLE_CLIENT_ZIP }}
+  unarchive:
+    src: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/{{ ORACLE_CLIENT_ZIP }}"
+    dest: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/"
+    owner: oracle
+    group: oinstall
+    mode: '775'
+    remote_src: yes
+
+- name: copy client_install.rsp file
+  template:
+    src: client_install.j2
+    dest: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/client/response/client_install.rsp"
+    mode: '775'
+    owner: oracle
+    group: oinstall
+    backup: yes
+
+- name: runInstaller
+  shell: |
+    export TMP={{ ORACLE_PATH }}/tmp
+    ./runInstaller -ignoreSysPrereqs \
+      -silent \
+      -responseFile {{ ORABIN_PATH }}/{{ MW_VERSION }}/client/response/client_install.rsp \
+      INVENTORY_LOCATION={{ CLIENT_INVENTORY_LOC }} \
+#      | tee {{ CLIENT_INVENTORY_LOC }}/logs/runInstaller.log      
+  async: 1000
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/client"
+  register: runInstaller
+
+- debug: var=runInstaller.stdout
+
+- name: get log file
+  shell: "ls -tr oraInstall*.out | tail -n1"
+  args:
+    chdir: "{{ CLIENT_INVENTORY_LOC }}/logs/"
+  register: clientsilentInstall
+
+- name: Wait until the string "successful." is in the file {{ CLIENT_INVENTORY_LOC }}/logs/{{ clientsilentInstall.stdout }} before continuing
+  wait_for:
+    path: "{{ CLIENT_INVENTORY_LOC }}/logs/{{ clientsilentInstall.stdout }}"
+    search_regex: "Successfully Setup Software"
+    timeout: 900
+
+- debug:
+    msg: "The installation of Oracle Client 12c was successful"
+
+- name: run orainstRoot
+  shell: ./orainstRoot.sh > {{ LOGS_DIR }}/orainstRoot.log
+  args:
+    chdir: "{{ CLIENT_INVENTORY_LOC }}"
+  become_user: root
+    
+- name: Wait until the string "complete" is in the file {{ LOGS_DIR }}/orainstRoot.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/orainstRoot.log"
+    search_regex: "The execution of the script is complete"
+    timeout: 900
+
+- name: Update tnsnames.ora
+  template:
+    src: tnsnames.ora.j2
+    dest: "{{ ORACLE_CLIENT_HOME }}/network/admin/tnsnames.ora"
+    mode: '0775'
+    owner: oracle
+    group: oinstall
+  tags: tnsnames
+
+- debug:
+    msg: "The execution of the script is complete."

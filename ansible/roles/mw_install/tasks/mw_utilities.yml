@@ -1,0 +1,160 @@
+- name: Managed Server | stopManagedWebLogic.sh
+  shell: "./stopManagedWebLogic.sh {{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}"
+  async: 300
+  args:
+    chdir: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/bin"
+  tags: [stop_all, stop_mwl, restart_all]
+  
+- name: "Wait until the string Shutdown has completed in {{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+  wait_for:
+    path: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+    search_regex: "Shutdown has completed"
+    timeout: 1200
+  tags: [stop_all, stop_mwl, restart_all]
+
+- debug:
+    msg: "ManagedWebLogic Stopped"
+  tags: [stop_all, stop_mwl, restart_all]
+
+- name: Managed Server | stopNodeManager.sh
+  shell: "nohup {{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/stopNodeManager.sh &"
+  async: 120
+  poll: 0
+  tags: [stop_all, stop_nm, restart_all]
+
+- name: "Wait until the string Shutting in {{ M_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/stopnodemanager.log"
+  wait_for:
+    path: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/stopnodemanager.log"
+    search_regex: "<StopNodeManager> <Sending signal TERM to"
+    timeout: 120
+  ignore_errors: True
+  tags: [stop_all, stop_nm, restart_all]
+
+- debug:
+    msg: "NodeManager Stopped"
+  tags: [stop_all, stop_nm, restart_all]
+
+- debug:
+    msg: "{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} Server stoped successfully"
+  tags: [stop_all, stop_nm, restart_all]
+
+- name: Admin Server | stopWebLogic.sh
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/stopWebLogic.sh &"
+  async: 120
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: True
+  tags: [stop_all, stop_adm, restart_all]
+
+- name: Wait until the string "Shutdown has completed" before continuing
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/logs/AdminServer.log"
+    search_regex: "Shutdown has completed"
+    timeout: 120
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: True
+  ignore_errors: True
+  tags: [stop_all, stop_adm, stop_mwl, stop_nm, restart_all]
+
+- debug:
+    msg: "Admin Server Stopped successfully."
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: True
+  tags: [stop_all, stop_adm, restart_all]
+
+- name: Wait for 20 seconds
+  pause:
+    seconds: 20
+  tags: [stop_all, stop_adm, restart_all]
+
+- name: Admin Server | startWebLogic.sh
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/startWebLogic.sh &"
+  async: 300
+#  poll: 0
+  run_once: True
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  tags: [start_adm, start_all, restart_all]
+
+- name: Wait until the string "Server state changed to RUNNING" before continuing
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/logs/AdminServer.log"
+    search_regex: "Server state changed to RUNNING"
+    timeout: 3000
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: True
+  tags: [start_adm, start_all, restart_all]
+
+- name: MW | wait for Port {{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}
+  wait_for:
+    host: "{{ groups[MW_HOSTS][0] }}"
+    port: "{{ MW_ADMIN_PORT }}"
+    delay: 10
+  tags: [start_adm, start_all, restart_all]
+
+- name: MW | Print {{ SUITE }} URL's
+  ansible.builtin.debug:
+    msg:
+    - "{{ SUITE }} Admin Server Started successfully."
+    - "{{ SUITE }} Admin URL: http://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}/console"
+    - "{{ SUITE }} EM URL: http://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}/em"
+  tags: [start_adm, start_all, restart_all]
+  run_once: True
+
+- debug:
+    msg: "Admin Server Started successfully."
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: True
+  tags: [start_adm, start_all, restart_all]
+
+- name: Managed Server | startNodeManager.sh
+  shell: "nohup {{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/startNodeManager.sh &"
+  async: 120
+  poll: 0
+  tags: [start_nm, start_all, restart_all]
+
+- name: "Wait until the string socket listener started in {{ M_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.log"
+  wait_for:
+    path: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.log"
+    search_regex: "socket listener started"
+    timeout: 1200
+  tags: [start_nm, start_all, restart_all]
+
+- debug:
+    msg: "NodeManager Started"
+  tags: [start_nm, start_all, restart_all]
+
+- name: Managed Server | startManagedWebLogic.sh
+  shell: "nohup ./startManagedWebLogic.sh {{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} &"
+  async: 120
+  args:
+    chdir: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/bin"
+  tags: [start_mwl, start_all, restart_all]
+
+- name: "Wait until the string Server state changed to RUNNING in {{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS/logs/{{ SUITE }}_MS.log"
+  wait_for:
+    path: "{{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+    search_regex: "Server state changed to RUNNING"
+    timeout: 1200
+  tags: [start_mwl, start_all, restart_all]
+
+- debug:
+    msg: "{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} Server Started successfully"
+  tags: [start_mwl, start_all, restart_all]
+
+- name: MW | wait for Port {{ MS_PORT }} on Managed Servers
+  wait_for:
+    host: "{{ inventory_hostname }}"
+    port: "{{ MS_PORT }}"
+    delay: 30
+  tags: [start_mwl, start_all, restart_all]
+
+- name: OSM | Verify OrderManagement URL http://{{ inventory_hostname }}:{{ MS_PORT }}/OrderManagement
+  uri: 
+    url: http://{{ inventory_hostname }}:{{ MS_PORT }}/OrderManagement
+    follow_redirects: yes
+  register: _result
+  until: _result.status == 200
+  retries: 40 #40 * 6 seconds = 4min
+  delay: 6 #Every 6 seconds
+  when: SUITE == "OSM"
+  ignore_errors: True
+  tags: [start_mwl, start_all, restart_all, om_check]

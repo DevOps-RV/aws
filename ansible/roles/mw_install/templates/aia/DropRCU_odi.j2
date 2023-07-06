@@ -1,0 +1,25 @@
+#!/bin/bash
+export JAVA_HOME={{ JAVA_HOME }}; export PATH=$JAVA_HOME/bin:$PATH
+
+if [ -f passwdfile_odi.txt ]; then
+   rm passwdfile_odi.txt
+fi
+
+#for component in {% for item in RCU_COMPONENT['ODI'] %}{{ item }}{{ " " if not loop.last }}{% endfor %}; do
+#   echo "{{ RCU_SCHEMA_PASSWORD }}" >> passwdfile_odi.txt
+#done
+
+echo "{{ RCU_SCHEMA_PASSWORD }}" >> passwdfile_odi.txt
+
+echo "***Dropping RCU SCHEMAS***"
+
+sh -c "{{ ODI_HOME }}/oracle_common/bin/rcu -silent -dropRepository \
+-databaseType ORACLE \
+-connectString {{ DB_HOST_NAME }}:{{ DB_PORT }}:{{ DB_NAME }} \
+-dbUser {{ SYSDB_USER }} \
+-dbRole {{ SYSDB_USER_ROLE }} \
+-schemaPrefix {{ ODI_RCU_SCHEMA_PREFIX }} \
+{% for item in RCU_COMPONENT['ODI'] %}
+-component {{ item }} \
+{% endfor %}
+-f < ./passwdfile_odi.txt"

@@ -1,0 +1,102 @@
+GRANT "EXP_FULL_DATABASE" TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT "IMP_FULL_DATABASE" TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT "RESOURCE" TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT CONNECT TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT "DBA" TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT QUERY REWRITE TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT UNLIMITED TABLESPACE TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT SELECT_CATALOG_ROLE TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT EXECUTE_CATALOG_ROLE to {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT SELECT ON DBA_JOBS to {{ osm_db_admin_user | upper }} with grant option;
+GRANT EXECUTE ON DBMS_LOCK TO {{ osm_db_admin_user | upper }} WITH GRANT OPTION;
+GRANT EXECUTE ON DBMS_REDEFINITION to {{ osm_db_admin_user | upper }} WITH GRANT OPTION;
+GRANT EXECUTE ON UTL_FILE to {{ osm_db_admin_user | upper }} WITH GRANT OPTION;
+GRANT SELECT ON SCHEMA_VERSION_REGISTRY to {{ osm_db_admin_user | upper }};
+GRANT STBROLE to {{ osm_db_admin_user | upper }};
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'DBA_USERS',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT');
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'DBA_OBJECTS',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT');
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'DBA_FREE_SPACE',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT');
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'V_$TEMP_EXTENT_MAP',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT');
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'V_$TEMP_EXTENT_POOL',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT');
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'V_$PARAMETER',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT',
+p_grant_option => true);
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'V_$SYSTEM_PARAMETER',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT',
+p_grant_option => true);
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'V_$DATABASE',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT',
+p_grant_option => true);
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'DBA_TABLESPACES',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT',
+p_grant_option => true);
+end;
+/
+
+begin
+rdsadmin.rdsadmin_util.grant_sys_object(
+p_obj_name => 'DBA_AUTOTASK_CLIENT_JOB',
+p_grantee => '{{ osm_db_admin_user | upper }}',
+p_privilege => 'SELECT',
+p_grant_option => true);
+end;
+/
+
+exit;

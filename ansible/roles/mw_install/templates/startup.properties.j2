@@ -1,0 +1,4 @@
+#Server startup properties
+#Mon Jun 28 13:31:54 EDT 2021
+Arguments=-Xms4g -Xmx4g -Xmn2g -XX\:PermSize\=768m -XX\:MaxPermSize\=768m -Dweblogic.SAFTXTimeout\=10 -Dweblogic.jms.saf.RefreshInterval\=100000 -XX\:+UseConcMarkSweepGC -XX\:+UseParNewGC -XX\:ParallelGCThreads\=4 -XX\:SurvivorRatio\=6 -XX\:TargetSurvivorRatio\=90 -XX\:MaxTenuringThreshold\=15 -XX\:+CMSClassUnloadingEnabled -XX\:CMSInitiatingOccupancyFraction\=60 -XX\:+UseCMSInitiatingOccupancyOnly -XX\:+PrintGCDateStamps -XX\:+PrintGCDetails -XX\:+PrintHeapAtGC -Xloggc\:/opt/oracle/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}_gc.log -XX\:+HeapDumpOnOutOfMemoryError -XX\:HeapDumpPath\=/opt/oracle/logs
+SSLArguments=-Dweblogic.security.SSL.ignoreHostnameVerification\=true -Dweblogic.ReverseDNSAllowed\=false

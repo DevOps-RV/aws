@@ -1,0 +1,83 @@
+#============================================================================================
+# HEADER
+#============================================================================================
+# Title         : {{ MW_HOSTS | lower }}_domain.properties
+# Description   : This is properties file which stores all the variables needed for WL OS startup script.
+#
+#
+# Dependency    : This has to be manually filled out for each domain. Make sure the Jenkins job is updated to fetch env specific variables
+# ------------------------------------------------------------------------------------------
+# HISTORY
+#
+#
+#============================================================================================
+# END_OF_HEADER
+#============================================================================================
+
+
+#**********************************************************************************************************
+#****************Begin variable declaration. These are specific to each VM*********************************
+# Name of WebLogic servers instances; Each server name is delimited by a pipe; Order matters
+
+# Common properties across domains
+
+#mail notifications
+From=mail_from_aws_{{ MW_HOSTS | lower }}_startup_script@donot_reply.com
+
+To=emaildistro.com
+ORACLE_USER=oracle
+ADMIN_PID=`ps -ef | grep java | grep AdminServer | awk '{print $2}'`
+fetchserverstate=/home/oracle/OSService_WLS/fetchserverstate.sh
+serverstate=/home/oracle/OSService_WLS/serverstate.py
+
+#LB status.txt file
+LB_STATUS_FILE=/opt/oracle/status.txt
+
+#LB status.txt file location
+LB_STATUS_FILE_LOC=/opt/oracle
+NM_Startup_Line='Plain socket listener started on port'
+STARTUP_WAIT="$((SECONDS+1200))"
+NM_WAIT="$((SECONDS+200))"
+SHUTDOWN_WAIT=300
+
+# wlst.sh script path
+wlst=/opt/oracle/fmw12214/oracle_common/common/bin/wlst.sh
+
+# Environment specific variables
+env={ MW_HOSTS | lower }}
+
+## Admin Specific variables
+# Log file for AdminServer start/stop events
+Admin_logFile={{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/logs/AdminServer.log
+
+ADMIN_START_SCRIPT={{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/startWebLogic.sh
+ADMIN_STOP_SCRIPT={{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/stopWebLogic.sh
+
+# path where AdminServer's 'tmp' and 'cache' is located.
+Admin_path={{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer
+
+# AdminServer url and port. 
+t3='t3://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}'
+
+Admin_Startup_Line='Server state changed to RUNNING'
+
+## ManagedServer Specific variables
+#MS info. Make sure the inv file is updated to have MS values per node.
+MS={{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}
+MS_PID=`ps -ef | grep java | grep {{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} | awk '{print $2}'`
+
+MS_Startup_Line='Server state changed to RUNNING'
+
+MS_START_SCRIPT={{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/startManagedWebLogic.sh
+MS_STOP_SCRIPT={{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/stopManagedWebLogic.sh
+
+MS_logFile={{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log
+# path where ManagedServer's 'tmp' and 'cache' is located.
+MS_path={{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}
+
+setDomainEnv={{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/setDomainEnv.sh
+
+# NM info
+NM_PID=`ps -ef | grep java | grep weblogic.NodeManager | awk '{print $2}'`
+NM_START_SCRIPT={{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/startNodeManager.sh
+#NM_logFile={{ M_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.log

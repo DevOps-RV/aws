@@ -1,0 +1,361 @@
+#AIA | Cluster decoupling
+- name: AIA | Copy Cluster Coupling & Decoupling and AIA_Run_Config files to the {{ SCRIPT_HOME }}
+  template:
+    src: "aia/{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '+x'
+  loop:
+    - { src: removeWebLogicServerFromCluster.j2, dest: removeWebLogicServerFromCluster.py }
+  tags: aia_decouple
+
+- name: AIA | Remove MServers from Cluster
+  shell: "{{ ORACLE_HOME }}/oracle_common/common/bin/wlst.sh removeWebLogicServerFromCluster.py > {{ LOGS_DIR }}/removems.log"
+  args:
+    chdir: "{{ SCRIPT_HOME }}/"
+  async: 300  
+  tags: aia_decouple
+  
+- name: AIA | Wait until the string "completed" is in the file {{ LOGS_DIR }}/removems.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/removems.log"
+    search_regex: completed
+    timeout: 900  
+  tags: aia_decouple
+
+#AIA | ODI RCU
+- name: AIA | Copy Template files to the {{ SCRIPT_HOME }}
+  template:
+    src: "aia/{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '+x'
+  loop:
+    - { src: manageRCU_odi.j2, dest: manageRCU_odi.sh }
+    - { src: DropRCU_odi.j2, dest: DropRCU_odi.sh }
+    - { src: createODIDomain.py.j2, dest: createODIDomain.py }
+    - { src: createODIDomain.j2, dest: createODIDomain.sh }
+  tags: [odi_rcu, odi_domain_create]
+
+#AIA | Install ODI RCU
+- name: AIA | ODI RCU Install
+  shell: "{{ SCRIPT_HOME }}/manageRCU_odi.sh > {{ LOGS_DIR }}/odi_rcu.log"
+  async: 1000
+  tags: odi_rcu
+
+- name: AIA | Wait until the string "Completed" is in the file {{ LOGS_DIR }}/odi_rcu.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/odi_rcu.log"
+    search_regex: Completed
+    timeout: 900
+  tags: odi_rcu
+
+- debug:
+    msg: "ODI Repository Creation Utility - Create : Operation Completed"
+  tags: odi_rcu
+
+- name: AIA | Create {{ SUITE }} Domain using createODIDomain.py
+  shell: |
+    export jh="{{ JAVA_HOME }}"
+    export oh="{{ ODI_HOME }}"
+    {{ ODI_HOME }}/oracle_common/common/bin/wlst.sh {{ SCRIPT_HOME }}/createODIDomain.py > {{ LOGS_DIR }}/createODIDomain.log
+  async: 1000
+  tags: odi_domain_create
+
+- name: AIA | Wait until the string "successfully" is in the file {{ LOGS_DIR }}/createODIDomain.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/createODIDomain.log"
+    search_regex: "Done creating Standalone domain"
+    timeout: 3000
+  tags: odi_domain_create
+
+- name: Enable X11
+  block:      
+    - name: Install Xauth Packages
+      ansible.builtin.yum:
+        name: 
+          - xauth
+          - xorg-x11-xauth
+          - xclock
+          - xterm
+          - libXtst
+        state: present
+
+    - name: sshd_config | Enabling X11 Forwarding  
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        backup: yes
+      loop:
+        - { regexp: '^X11Forwarding', line: 'X11Forwarding yes' }
+        - { regexp: '^X11UseLocalhost', line: 'X11UseLocalhost no' }      
+      notify:
+        - restart_sshd
+
+    - name: Create .Xauthority file
+      ansible.builtin.file:
+        path: "/home/{{ item }}/.Xauthority"
+        state: touch
+      become_user: "{{ item }}"
+      loop:
+        - ec2-user
+        - oracle
+
+  tags: [enable_x11, odi_domain_create]
+  become: yes
+  become_user: root
+
+- debug:
+    msg: 
+    - "ODI Domain created successfully"
+    - "Please configure ODI Agent manually before proceed"
+  tags: odi_domain_create
+  
+#Manual Step to conifure odi agent
+
+#AIA | RUN Config
+- name: AIA | Copy AIA_Run_Config files to the {{ SCRIPT_HOME }}
+  template:
+    src: "aia/{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '+x'
+  loop:
+    - { src: AIA_Run_Config.rsp.j2, dest: AIA_Run_Config.rsp }
+  tags: aia_run_config
+
+- name: AIA | Remove as sysdba query from below file
+  replace:
+    path: "{{ ORACLE_HOME }}/soa/aiafp/Install/AID/lib/AIDConfigurationLibraryTasks.xml"
+    regexp: 'as sysdba'
+    replace: ''
+    backup: yes
+  tags: aia_run_config
+
+- name: AIA | Replace COMMS_HOME in {{ AIA_HOME }}/comms_home/bin/commsenv.sh
+  replace:
+    path: "{{ AIA_HOME }}/comms_home/bin/commsenv.sh"
+    regexp: "{{ item.regexp }}"
+    replace: "{{ item.replace }}"
+    backup: yes
+  loop:
+    - { regexp: '<COMMS_HOMELOCATION>', replace: "{{ AIA_HOME }}/comms_home" }
+    - { regexp: '<DOMAINLOCATION>', replace: "{{ A_SERVER }}/{{ DOMAIN_NAME }}" }
+  tags: aia_run_config
+
+- name: AIA | Run Config
+  shell: |
+    source {{ A_SERVER }}/{{ DOMAIN_NAME }}/soa/aia/bin/aiaenv.sh
+    source {{ AIA_HOME }}/comms_home/bin/commsenv.sh
+    export COMMS_HOME=/opt/oracle/aia/aia122/comms_home
+    ./run_config.sh -mode=silent -responseFile={{ SCRIPT_HOME }}/AIA_Run_Config.rsp > {{ LOGS_DIR }}/aia_run_config.log
+  args:
+    chdir: "{{ AIA_HOME }}/comms_home/config/"
+  async: 2000
+  tags: aia_run_config
+
+- name: AIA | Wait until the string "completed" is in the file {{ LOGS_DIR }}/aia_run_config.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/aia_run_config.log"
+    search_regex: completed
+    timeout: 1500
+  tags: aia_run_config
+
+- name: AIA | alter user AIA_COMMS_XREF quota unlimited on AIA_DATA
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_NAME }} <<< "alter user AIA_COMMS_XREF quota unlimited on AIA_DATA;"
+  tags: aia_run_config
+  no_log: True
+
+#AIA | JCA Deployment
+- name: AIA | create deployplan BRMAdapter directory
+  file:
+    path: "{{ item }}"
+    state: "directory"
+    owner: oracle
+    group: oinstall
+    mode: '750'
+    recurse: yes
+  loop:
+    - "{{ CLUSTER }}/deployplan/BRMAdapter"
+  tags: aia_jca_deploy
+
+- name: AIA | download OracleBRMJCA15Adapter.rar file
+  get_url:
+    url: "{{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: '+x'
+  loop: 
+    - { src: "OracleBRMJCA15Adapter.rar", dest: "{{ CLUSTER }}/deployplan/BRMAdapter/OracleBRMJCA15Adapter.rar" }
+  tags: aia_jca_deploy
+
+- name: AIA | copy BRMResourceAdapterCreation.py
+  copy:
+    src: BRMResourceAdapterCreation.py
+    dest: "{{ SCRIPT_HOME }}/BRMResourceAdapterCreation.py"
+    mode: +x  
+  tags: aia_jca_deploy
+
+- name: AIA | Copy BRMResourceAdapter.properties
+  template:
+    src: "aia/{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '+x'
+  loop:
+    - { src: BRMResourceAdapter.properties.j2, dest: BRMResourceAdapter.properties }
+  tags: aia_jca_deploy
+
+- name: AIA | BRMResource Adapter Creation
+  shell: |
+    . ./setWlstEnv.sh
+    cd {{ SCRIPT_HOME }}
+    java weblogic.WLST BRMResourceAdapterCreation.py > {{ LOGS_DIR }}/brmjc.log
+  args:
+    chdir: "{{ ORACLE_HOME }}/oracle_common/common/bin"  
+  tags: aia_jca_deploy
+
+- name: AIA | Wait until the string completed is in the file {{ LOGS_DIR }}/brmjc.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/brmjc.log"
+    search_regex: completed
+  tags: aia_jca_deploy
+
+- debug:
+    msg: "BRMResource Adapter Creation Completed"  
+  tags: aia_jca_deploy
+
+#AIA | Copy Wallet
+- name: AIA | create BRMAdapter wallet directory
+  file:
+    path: "{{ item }}"
+    state: "directory"
+    owner: oracle
+    group: oinstall
+    mode: '750'
+    recurse: yes
+  loop:
+    - "{{ CLUSTER }}/deployplan/BRMAdapter/wallet"
+  tags: aia_jca_deploy
+
+- name: AIA | Create test Wallet sso and p12 files for BRMAdapter
+  ansible.builtin.file:
+    path: "{{ CLUSTER }}/deployplan/BRMAdapter/wallet/{{ item }}"
+    owner: oracle
+    group: oinstall
+    state: touch
+  loop:
+    - cwallet.sso
+    - ewallet.p12
+  tags: aia_jca_deploy
+
+#AIA | O2C AABC Deploy
+- name: AIA | Backup O2CBRMDP add TestOrderOrchestrationEBF before update
+  lineinfile:
+    path: "{{ AIA_HOME }}/comms_home/pips/Communications/O2CBRM/DeploymentPlans/O2CBRMDP.xml"
+    regexp: "^(.*)TestOrderOrchestrationEBF(.*)$"
+    state: absent
+    backup: yes
+  tags: [aia_o2c_aabc_deploy, o2c_deploy]
+
+- name: AIA | O2C Deployment
+  shell: |
+    source {{ AIA_HOME }}/comms_home/bin/commsenv.sh
+    chmod +x {{ AIA_HOME }}/comms_home/pips/Communications/setupO2C.sh
+    {{ AIA_HOME }}/comms_home/pips/Communications/setupO2C.sh {{ WEBLOGIC_USERNAME }} {{ WEBLOGIC_PASSWORD }} > {{ LOGS_DIR }}/o2cdeploy.log
+  async: 21600
+  tags: [aia_o2c_aabc_deploy, o2c_deploy]
+
+- name: "AIA | Wait until the string SUCCESSFUL is in the file {{ LOGS_DIR }}/o2cdeploy.log before continuing"
+  wait_for:
+    path: "{{ LOGS_DIR }}/o2cdeploy.log"
+    search_regex: "{{ item }}"
+    timeout: 1000
+  loop:
+    - 'O2C Base spoke deployed succesfully'
+    - 'O2C Siebel spoke deployed succesfully'
+    - 'O2C OSM spoke deployed succesfully'    
+    - 'O2C BRM spoke deployed succesfully'
+    - 'O2C Deployment Completed Succesfully'
+  tags: [aia_o2c_aabc_deploy, o2c_deploy]
+
+- debug:
+    msg: "AIA O2C Deployment Completed Successfully including all components O2C_Base, O2C_Siebel, O2C_OSM and O2C_BRM"
+  tags: [aia_o2c_aabc_deploy, o2c_deploy]
+
+- name: AIA | AABC Deployment
+  shell: |
+    source {{ AIA_HOME }}/comms_home/bin/commsenv.sh
+    chmod +x {{ AIA_HOME }}/comms_home/pips/Communications/AABC/DeploymentPlans/deployAABC.sh
+    {{ AIA_HOME }}/comms_home/pips/Communications/AABC/DeploymentPlans/deployAABC.sh {{ WEBLOGIC_USERNAME }} {{ WEBLOGIC_PASSWORD }} > {{ LOGS_DIR }}/AABCdeploy.log
+  async: 21600
+  tags: [aia_o2c_aabc_deploy, aabc_deploy]
+
+- name: "AIA | Wait until the string SUCCESSFUL is in the file {{ LOGS_DIR }}/o2cdeploy.log before continuing"
+  wait_for:
+    path: "{{ LOGS_DIR }}/AABCdeploy.log"
+    search_regex: "{{ item }}"
+    timeout: 1000
+  loop:
+    - 'AABC Deployment Completed Succesfully'
+  tags: [aia_o2c_aabc_deploy, aabc_deploy]
+
+- debug:
+    msg: "AIA AABC Deployment Completed Successfully including all components"
+  tags: [aia_o2c_aabc_deploy, aabc_deploy]
+
+#AIA Cluster Add
+#STOP stopManagedWebLogic and stopNodeManager in ASERVER
+- name: AIA | stop stopManagedWebLogic.sh in Admin Server
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/stopManagedWebLogic.sh {{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} &"
+  async: 120
+  tags: aia_clusteradd
+
+- name: "AIA | Wait until the string Shutdown has completed in {{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+    search_regex: "Shutdown has completed"
+    timeout: 1200
+  tags: aia_clusteradd
+
+- debug:
+    msg: "ManagedWebLogic Stopped"
+  tags: aia_clusteradd
+
+- name: AIA | Stop node stopNodeManager.sh in Admin Server
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/stopNodeManager.sh &"
+  async: 120
+  tags: aia_clusteradd
+
+- name: "AIA | Wait until the string Shutting in {{ A_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/stopnodemanager.log"
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/stopnodemanager.log"
+    search_regex: "StopNodeManager"
+    timeout: 1200
+  tags: aia_clusteradd
+
+- debug:
+    msg: "{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} NodeManager stoped successfully"
+  tags: aia_clusteradd
+  
+#AIA | Coupling Script
+- name: AIA | Copy Cluster Coupling file to the {{ SCRIPT_HOME }}
+  template:
+    src: "aia/{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '+x'
+  loop:
+    - { src: addWebLogicServerFromCluster.j2, dest: addWebLogicServerFromCluster.py }
+  tags: aia_clusteradd
+
+- name: AIA | add MServers to Cluster
+  shell: "{{ ORACLE_HOME }}/oracle_common/common/bin/wlst.sh addWebLogicServerFromCluster.py > {{ LOGS_DIR }}/addmservers.log"
+  args:
+    chdir: "{{ SCRIPT_HOME }}/"
+  async: 300  
+  tags: aia_clusteradd
+
+- name: AIA | Wait until the string "completed" is in the file {{ LOGS_DIR }}/addmservers.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/addmservers.log"
+    search_regex: completed
+    timeout: 900  
+  tags: aia_clusteradd

@@ -1,0 +1,383 @@
+---
+
+- name: check JDK exists
+  stat:
+    path: "{{ JAVA_HOME }}"
+  register: JDK
+  tags: [rcu, domain]
+
+- name: Fail when no JDK
+  fail:
+    msg: "JDK is not present at {{ JAVA_HOME }}"
+  when: JDK.stat.exists == False
+  tags: [rcu, domain]
+
+- name: Copy Template files to the {{ SCRIPT_HOME }}
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '+x'
+  loop:
+    - { src: manageRCU.sh.j2, dest: manageRCU.sh }
+    - { src: DropRCU.sh.j2, dest: DropRCU.sh }    
+    - { src: "create{{ SUITE }}Domain.py.j2", dest: "create{{ SUITE }}Domain.py" }
+    - { src: createDomain.j2, dest: createDomain.sh }
+    - { src: wl_conf_update.py.j2, dest: wl_conf_update.py }
+  tags: [rcu, domain, nm_pass_update, lb_update]
+
+#Tablespace Checks
+- name: check the tablespace {{ DB_TABLESPACE }} exists
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_HOST_NAME }}:{{ DB_PORT }}/{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = '{{ DB_TABLESPACE | upper}}';"
+  become: yes
+  become_user: oracle
+  register: tablespace
+  tags: rcu
+#  no_log: True
+
+- name: create tablespace {{ DB_TABLESPACE }} if not present
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_HOST_NAME }}:{{ DB_PORT }}/{{ DB_NAME }} <<< "CREATE TABLESPACE {{ DB_TABLESPACE | upper}};"
+  when: DB_TABLESPACE not in tablespace.stdout
+  become: yes
+  become_user: oracle
+  tags: rcu
+#  no_log: True
+
+- name: check the tablespace {{ DB_TABLESPACE }} created
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_HOST_NAME }}:{{ DB_PORT }}/{{ DB_NAME }} <<< "SELECT TABLESPACE_NAME FROM DBA_TABLESPACES WHERE TABLESPACE_NAME = '{{ DB_TABLESPACE | upper}}';"
+  when: DB_TABLESPACE not in tablespace.stdout
+  become: yes
+  become_user: oracle
+  register: NEW_TABLESPACE
+  tags: rcu
+#  no_log: True
+
+- debug:
+    msg: "{{ DB_TABLESPACE }} tablespace is present"
+  when: DB_TABLESPACE in tablespace.stdout
+  tags: rcu
+
+- name: comment GRANT SELECT in createuser_grant_privs_oracle.sql
+  replace:
+    dest: "{{ ORACLE_HOME }}/soa/common/sql/soainfra/sql/oracle/createuser_grant_privs_oracle.sql"
+    regexp: '^GRANT SELECT ON sys.DBA_TABLESPACE_USAGE_METRICS to &bpm_user;'
+    replace: '--GRANT SELECT ON sys.DBA_TABLESPACE_USAGE_METRICS to &bpm_user;'
+  when: SUITE != "OSM"
+  tags: rcu
+
+#install rcu
+- name: "Install {{ SUITE }} RCU Components"
+  shell: "{{ SCRIPT_HOME }}/manageRCU.sh > {{ LOGS_DIR }}/rcu.log"
+  async: 1000
+  tags: rcu
+
+- name: Wait until the string "Completed" is in the file {{ LOGS_DIR }}/rcu.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/rcu.log"
+    search_regex: Completed
+    timeout: 900
+  tags: rcu
+
+- debug:
+    msg: "{{ SUITE }} Repository Creation Utility - Create : Operation Completed"
+  tags: rcu
+
+#OSB
+- name: OSB Tables
+  import_tasks: osb_tables.yml
+  when: SUITE == "OSB"
+  tags: [rcu, osb_tables]
+
+- name: create templates and applications directory
+  file:
+    path: "{{ item }}"
+    state: "directory"
+    mode: '750'
+    owner: oracle
+    group: oinstall
+    recurse: yes
+  become_user: root
+  loop:
+    - "{{ A_SERVER }}/{{ DOMAIN_NAME }}/templates"
+    - "{{ A_SERVER }}/{{ DOMAIN_NAME }}/applications"
+  tags: domain
+
+- name: Create {{ SUITE }} Domain using create{{ SUITE }}Domain.py
+  shell: |
+    export jh="{{ JAVA_HOME }}"
+    export oh="{{ ORACLE_HOME }}"
+    {{ ORACLE_HOME }}/oracle_common/common/bin/wlst.sh {{ SCRIPT_HOME }}/create{{ SUITE }}Domain.py -oh {{ ORACLE_HOME }} -jh {{ JAVA_HOME }} -parent {{ A_SERVER }} -name {{ DOMAIN_NAME }} > {{ LOGS_DIR }}/{{ SUITE }}domainpy.log
+  async: 1000
+  tags: domain
+
+- name: Wait until the string "successfully" is in the file {{ LOGS_DIR }}/{{ SUITE }}domainpy.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/{{ SUITE }}domainpy.log"
+    search_regex: successfully
+    timeout: 3000
+  tags: domain
+
+- debug:
+    msg: "{{ SUITE }} Domain Created Successfully"
+  tags: domain
+
+- name: create security folder in aserver
+  file:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ item }}/security"
+    state: directory
+    mode: '750'
+  loop:
+    - "{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}"
+    - AdminServer
+  tags: domain
+
+- name: "Copy boot.properties and setUserOverrides"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: '750'
+  loop:
+    - { src: boot.properties.j2, dest: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/security/boot.properties" }
+    - { src: boot.properties.j2, dest: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/security/boot.properties" }
+    - { src: boot.properties.j2, dest: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/config/nodemanager/nm_password.properties" }
+    - { src: setUserOverrides_admin.j2, dest: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/setUserOverrides.sh" }
+  tags:
+    - domain
+
+- name: MW | update SecureListener=false in AServer nodemanager.properties
+  lineinfile:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.properties"
+    regexp: '^SecureListener=.*'
+    line: 'SecureListener=false'
+    backup: yes
+  tags: [domain, aia_domain_update]
+
+- name: MW | Adminserver | startWebLogic.sh
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/startWebLogic.sh &"
+  async: 300
+  tags: [domain, aia_domain_update ]
+
+- name: MW | Wait until the string "Server state changed to RUNNING" before continuing
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/logs/AdminServer.log"
+    search_regex: "Server state changed to RUNNING"
+    timeout: 3000
+  tags: [domain, aia_domain_update]
+
+- name: MW | wait for Port {{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}
+  wait_for:
+    host: "{{ groups[MW_HOSTS][0] }}"
+    port: "{{ MW_ADMIN_PORT }}"
+    delay: 10
+  tags: [domain, aia_domain_update]
+
+- name: MW | Print {{ SUITE }} URL's
+  ansible.builtin.debug:
+    msg:
+    - "{{ SUITE }} Admin Server Started successfully."
+    - "{{ SUITE }} Admin URL: http://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}/console"
+    - "{{ SUITE }} EM URL: http://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}/em"
+  tags: [domain, aia_domain_update]
+
+- name: MW | Print {{ SUITE }} SB Console URL's after console is up
+  ansible.builtin.debug:
+    msg: "{{ SUITE }} SB Console URL: http://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}/sbconsole"
+  when: SUITE == "OSB"
+  tags: [domain, aia_domain_update]
+
+#Medrec delete
+- name: Delete Medrec Server
+  import_tasks: medrec_delete.yml
+  when: SUITE != "OSM"
+  tags: [domain, aia_domain_update, medrec_delete]
+
+#AIA | AIAPersistencestore
+- name: AIA | Copy AIAPersistencestore.py, JMSConfiguration.properties
+  template:
+    src: "aia/{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '+x'
+  when: SUITE == "AIA"
+  loop:
+    - { src: AIAPersistencestore.j2, dest: AIAPersistencestore.py }
+    - { src: JMSConfiguration.properties.j2, dest: JMSConfiguration.properties }
+  tags: [domain, aia_domain_update, aia_persistant_store_target]
+
+- name: AIA | Invoke AIAPersistencestore.py
+  shell: |
+    source {{ ORACLE_HOME }}/oracle_common/common/bin/setWlstEnv.sh
+    java weblogic.WLST AIAPersistencestore.py | tee {{ LOGS_DIR }}/AIAPersistencestore.log
+  args:
+    chdir: "{{ SCRIPT_HOME }}"
+  register: Persistencestore
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update, aia_persistant_store_target]
+
+- debug: var=Persistencestore.stdout_lines
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update, aia_persistant_store_target]
+  
+- name: AIA | Wait until the string "completed" is in the file {{ LOGS_DIR }}/AIAPersistencestore.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/AIAPersistencestore.log"
+    search_regex: completed
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update, aia_persistant_store_target]
+
+- debug:
+    msg: "AIA | PERSISTANT STORE TARGET COMPLETED"
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update, aia_persistant_store_target]
+
+#AIA | Stop AdminServer
+- name: AIA | Admin Server | stopWebLogic.sh
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/stopWebLogic.sh &"
+  async: 120
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- name: AIA | Wait until the string "Shutdown has completed" before continuing
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/logs/AdminServer.log"
+    search_regex: "Shutdown has completed"
+    timeout: 120
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- debug:
+    msg: "Admin Server Stopped successfully."
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+#AIA | Domain update on ASERVER
+- name: AIA | invoke SCEApp.sh
+  shell: ./SCEApp.sh {{ ORACLE_HOME }} > {{ LOGS_DIR }}/SCEApp.log
+  args:
+    chdir: "{{ AIA_HOME }}/comms_home/src/SCEApp/"
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+  
+- name: AIA | Verify Jar file exists after SCEApp.sh Operation
+  stat:
+    path: "{{ AIA_HOME }}/comms_home/src/SCEApp/oracle.soa.fp_template.jar"
+  register: jar
+  when: SUITE == "AIA"
+  failed_when: not jar.stat.exists
+  tags: [domain, aia_domain_update] 
+  
+- name: AIA | copy oracle.soa.fp_template.jar to {{ ORACLE_HOME }}/soa/common/templates/wls
+  copy:
+    src: "{{ AIA_HOME }}/comms_home/src/SCEApp/oracle.soa.fp_template.jar"
+    dest: "{{ ORACLE_HOME }}/soa/common/templates/wls/oracle.soa.fp_template.jar"
+    remote_src: yes
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+  
+- name: AIA | copy updateDomain.py
+  template:
+    src: updateDomain.py.j2
+    dest: "{{ SCRIPT_HOME }}/updateDomain.py"
+    mode: '+x'
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+  
+- name: AIA | Update Domain
+  shell: "{{ ORACLE_HOME }}/oracle_common/common/bin/wlst.sh updateDomain.py"
+  async: 600
+  args:
+    chdir: "{{ SCRIPT_HOME }}/"
+  register: updateDomain
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- debug: var=updateDomain.stdout
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+  
+- debug:
+    msg: "AIA | Update Domain Completed"
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+#AIA | Start Admin Server
+- name: AIA | Adminserver | startWebLogic.sh
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/startWebLogic.sh &"
+  async: 300
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- name: AIA | Wait until the string "Server state changed to RUNNING" before continuing
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/logs/AdminServer.log"
+    search_regex: "Server state changed to RUNNING"
+    timeout: 3000
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- name: MW | wait for Port {{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}
+  wait_for:
+    host: "{{ groups[MW_HOSTS][0] }}"
+    port: "{{ MW_ADMIN_PORT }}"
+    delay: 10
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- name: AIA | Print {{ SUITE }} URL's
+  ansible.builtin.debug:
+    msg:
+    - "{{ SUITE }} Admin Server Started successfully."
+    - "{{ SUITE }} Admin URL: http://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}/console"
+    - "{{ SUITE }} EM URL: http://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}/em"
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- pause:
+    minutes: 1
+  tags: [domain, aia_domain_update]
+
+#AIA Node manager and Managed Server
+#Start Node Manager
+- name: AIA | Start startNodeManager.sh in Admin Server
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/startNodeManager.sh &"
+  async: 600
+  poll: 0
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- name: "AIA | Wait until the string socket listener started in {{ A_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.log"
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/nodemanager/nodemanager.log"
+    search_regex: "socket listener started"
+    timeout: 600
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+  
+- debug:
+    msg: "NodeManager Started"
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+  
+#Start Managed Server from Aserver
+- name: AIA | Start startManagedWebLogic.sh in Admin Server
+  shell: "nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/startManagedWebLogic.sh {{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} &"
+  async: 120
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- name: "AIA | Wait until the string Server state changed to RUNNING in {{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+  wait_for:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}.log"
+    search_regex: "Server state changed to RUNNING"
+    timeout: 1200
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]
+
+- debug:
+    msg: "{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }} Server Started successfully"
+  when: SUITE == "AIA"
+  tags: [domain, aia_domain_update]

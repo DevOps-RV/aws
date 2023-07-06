@@ -1,0 +1,31 @@
+#######################################################################################
+#
+#    This wlst script shows you how to remove a WebLogic Managed Server from a Cluster
+#    Note: The Managed Server must be stopped !
+#
+#######################################################################################
+ 
+connect('{{ WEBLOGIC_USERNAME }}', '{{ WEBLOGIC_PASSWORD }}', 't3://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}')
+print ''
+print '======================================================'
+print 'The script has been connected to the Admin Server'
+print '======================================================'
+print ''
+ 
+edit()
+startEdit()
+
+{% for host in groups[MW_HOSTS] %}
+{%- if loop.index > 1 %}
+editService.getConfigurationManager().removeReferencesToBean(getMBean('/MigratableTargets/{{ SUITE }}_MS{{ loop.index }} (migratable)'))
+cd('/')
+cmo.destroyMigratableTarget(getMBean('/MigratableTargets/{{ SUITE }}_MS{{ loop.index }} (migratable)'))
+cd('/Servers/{{ SUITE }}_MS{{ loop.index }}')
+cmo.setCluster(None)
+
+{% endif %}
+{% endfor %} 
+
+activate()
+ 
+# This is the end of the script

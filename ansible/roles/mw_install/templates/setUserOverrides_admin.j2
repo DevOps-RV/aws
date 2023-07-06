@@ -1,0 +1,46 @@
+#!/bin/sh
+
+umask 027
+
+# Custom variables
+DOMAIN_NAME={{ DOMAIN_NAME }}
+DOMAIN_HOME={{ A_SERVER }}/{{ DOMAIN_NAME }}
+
+
+# Enabled monitoring, unlocking commercial features
+MONITOR_ARGS="-XX:+UnlockCommercialFeatures -XX:+FlightRecorder"
+
+
+# Standard Admin server memory settings
+
+AS_MEM_SIZE="{{ ASXMXXMS }}G"
+
+AS_MEM_ARGS="-Xms${AS_MEM_SIZE} -Xmx${AS_MEM_SIZE}"
+
+STD_MEM_ARGS="-d64 -Xss1024k"
+
+JAVA_OPTIONS="${JAVA_OPTIONS} -Djava.security.egd=file:///dev/./urandom -Dweblogic.UseEnhancedIncrementAdvisor=false -Djava.io.tmpdir={{ ORACLE_TMP }}"
+
+# Garbage Collection related settings
+GC_ARGS="-verbose:gc -XX:+HeapDumpOnOutOfMemoryError -XX:+ExitOnOutOfMemoryError -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+
+#NOT SUPPORTED -XX:PermSize=D3 -XX:MaxPermSize=2g XX:+UseParallelGC
+
+GC_DIAG_ARGS="-XX:HeapDumpPath=${DOMAIN_HOME}/servers/${SERVER_NAME}/logs -Xloggc:${DOMAIN_HOME}/servers/${SERVER_NAME}/logs/${SERVER_NAME}-gc-$(date +%Y%m%d_%H%M).log -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=10M"
+
+GC_ARGS="${GC_ARGS} ${GC_DIAG_ARGS}"
+
+# Custom arguments including SSL Args
+CUST_ARGS="-XX:+UseTLAB -Djavax.net.debug=ssl:handshake:verbose -Dssl.debug=true -Dweblogic.security.SSL.protocolVersion=TLS1"
+
+# Admin Server
+USER_MEM_ARGS="${STD_MEM_ARGS} ${AS_MEM_ARGS} ${MEM_DEV_ARGS} ${MONITOR_ARGS} ${GC_ARGS} ${CUST_ARGS}"
+export USER_MEM_ARGS
+
+# Set DERBY_FLAG
+DERBY_FLAG="false" ; export DERBY_FLAG
+
+# Java VM to server
+JAVA_VM="-server" ; export JAVA_VM
+
+export JAVA_OPTIONS

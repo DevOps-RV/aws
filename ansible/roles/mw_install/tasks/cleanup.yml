@@ -1,0 +1,54 @@
+---
+- name: kill oracle process
+  shell: killall --user oracle
+  ignore_errors: True
+
+- name: "drop {{ SUITE }} rcu"
+  shell: "{{ SCRIPT_HOME }}/DropRCU.sh > {{ LOGS_DIR }}/drop_rcu.log"
+  async: 1000
+
+- name: Wait until the string "Completed" is in the file {{ LOGS_DIR }}/drop_rcu.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/drop_rcu.log"
+    search_regex: "Drop : Operation Completed"
+    timeout: 900
+
+- debug:
+    msg: "{{ SUITE }} Repository Creation Utility - Drop : Operation Completed"
+
+- name: Drop ODI RCU
+  shell: "{{ SCRIPT_HOME }}/DropRCU_odi.sh > {{ LOGS_DIR }}/DropRCU_odi.log"
+  async: 1000
+  poll: 0
+  when: SUITE == "AIA"
+  tags: DropRCU_odi
+
+- name: Wait until the string "Completed" is in the file {{ LOGS_DIR }}/DropRCU_odi.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/DropRCU_odi.log"
+    search_regex: Completed
+    timeout: 900
+  when: SUITE == "AIA"
+  tags: DropRCU_odi
+
+- debug:
+    msg: "ODI Repository Creation Utility - Drop : Operation Completed"
+  when: SUITE == "AIA"
+  tags: DropRCU_odi
+
+#- name: cleanup /opt/oracle directory
+#  file:
+#    path: "{{ item }}"
+#    state: absent
+#  loop:
+#    - "{{ ORACLE_HOME }}"
+#    - "{{ ORACLE_CLIENT_HOME }}"
+#    - "{{ ORACLE_BASE }}"
+#    - "{{ DOMAIN_HOME }}"
+#    - "{{ ORACLE_TMP }}"
+#    - "{{ INVENTORY_LOC }}"
+#  when:
+#    - delete_apps is defined
+#    - delete_apps == 'sure'
+#    - env_name is defined
+#    - env_name != 'prd'

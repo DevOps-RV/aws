@@ -1,0 +1,46 @@
+#!/usr/bin/expect
+
+cd {{ DESIGN_STUDIO_HOME }}/headlessBuild
+
+set timeout 300
+spawn ant create-comsom-encrypted-password-properties-file
+
+expect "Please enter the password for user osm:"
+send "{{ osm_admin_password }}\n"
+expect "Please enter the same password again for user osm:"
+send "{{ osm_admin_password }}\n"
+
+expect "Please enter the password for user osmoe:"
+send "{{ osm_admin_password }}\n"
+expect "Please enter the same password again for user osmoe:"
+send "{{ osm_admin_password }}\n"
+
+expect "Please enter the password for user osmde:"
+send "{{ osm_admin_password }}\n"
+expect "Please enter the same password again for user osmde:"
+send "{{ osm_admin_password }}\n"
+
+expect "Please enter the password for user osmfallout:"
+send "{{ osm_admin_password }}\n"
+expect "Please enter the same password again for user osmfallout:"
+send "{{ osm_admin_password }}\n"
+
+expect "Please enter the password for user osmlf:"
+send "{{ osm_admin_password }}\n"
+expect "Please enter the same password again for user osmlf:"
+send "{{ osm_admin_password }}\n"
+
+expect "Please enter the password for user osmoelf:"
+send "{{ osm_admin_password }}\n"
+expect "Please enter the same password again for user osmoelf:"
+send "{{ osm_admin_password }}\n"
+
+expect "Please enter the password for user osmlfaop:"
+send "{{ osm_admin_password }}\n"
+expect "Please enter the same password again for user osmlfaop:"
+send "{{ osm_admin_password }}\n"
+
+expect "create-comsom-encrypted-password-properties-file:"
+expect "BUILD SUCCESSFUL"
+
+exit 0

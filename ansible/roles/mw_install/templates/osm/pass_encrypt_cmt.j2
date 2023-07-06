@@ -1,0 +1,20 @@
+#!/usr/bin/expect
+
+cd {{ DESIGN_STUDIO_HOME }}/headlessBuild
+
+set timeout 300
+spawn ant create-cmt-encrypted-password-properties-file
+
+expect "*Please Enter the CMT User Name:"
+send "{{ cmt_username }}\n"
+
+expect "Please enter the password for user cmt.admin:"
+send "{{ cmt_password }}\n"
+
+expect "Please enter the same password again for user cmt.admin:"
+send "{{ cmt_password }}\n"
+
+expect "create-cmt-encrypted-password-properties-file:"
+expect "BUILD SUCCESSFUL"
+
+exit 0

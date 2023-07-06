@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#***VARIABLES***
+
+# Declare JAVA_HOME
+export jh={{ JAVA_HOME }}
+# Declare ORACLE_HOME
+export oh={{ ORACLE_HOME }}
+export parent={{ A_SERVER }}
+export name={{ DOMAIN_NAME }}
+export user={{ WEBLOGIC_USERNAME }}
+export password={{ WEBLOGIC_PASSWORD }}
+#***VARIABLES***
+
+
+echo "*******************"
+echo "***Create Domain***"
+echo "*******************"
+{{ ORACLE_HOME }}/oracle_common/common/bin/wlst.sh {{ SCRIPT_HOME }}/create{{ SUITE }}Domain.py -oh {{ ORACLE_HOME }} -jh {{ JAVA_HOME }} -parent {{ A_SERVER }} -name {{ DOMAIN_NAME }} > {{ LOGS_DIR }}/{{ SUITE }}domainpy.log

@@ -1,0 +1,11 @@
+#connect([username],[password],[admin url:admin port])
+
+# below vars will be fetched from the jenkins job hidden variables
+connect('{{ WEBLOGIC_USERNAME }}','{{ WEBLOGIC_PASSWORD }}','t3://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}')
+servers=cmo.getServers()
+print "-------------------------------------------------------"
+print "\t"+cmo.getName()+" domain status"
+print "-------------------------------------------------------"
+for server in servers:
+        state(server.getName(),server.getType())
+print "-------------------------------------------------------"

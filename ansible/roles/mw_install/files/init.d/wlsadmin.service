@@ -1,0 +1,161 @@
+#!/bin/bash
+# chkconfig: - 35 94 06
+
+. /home/oracle/OSService_WLS/domain.properties
+
+lockfile=/var/lock/subsys/wlsadmin
+
+start() {
+    x=$(ps -ef | grep java | grep AdminServer | wc -l)
+    if [[ $x -ge 1 ]]; then
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>AdminServer is already running on this instance with PID: $ADMIN_PID <<<***************"
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "***************>>>AdminServer is already running on this instance with PID: $ADMIN_PID <<<***************" >> $Admin_logFile
+      #failure
+      echo
+      return 1
+    fi
+
+    # start the AdminServer if its not running already
+    if [[ $x == 0 ]]; then
+      echo -e "\n\n***************************************************************************************************************************" >> $Admin_logFile
+      echo -e "\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>Starting AdminServer..<<<***************"
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "***************>>>Starting AdminSever..<<<***************" >> $Admin_logFile
+      echo "***************************************************************************************************************************" >> $Admin_logFile
+      echo -e "AdminServer start script has been initiated on $HOSTNAME at $(date +%b\ %d,\ %Y\ "%r"\ %Z)" | mail -s " [ WebLogic restart script notification ] [$env] AdminServer start script has been initiated on $HOSTNAME " $To
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Start script Mail notification sent to: $To <<<*******"
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Start script Mail notification sent to: $To <<<*******" >> $Admin_logFile
+      # Clear tmp and cache before starting up the AdminServer.
+      rm -rf $Admin_path/tmp
+      rm -rf $Admin_path/cache
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Removed tmp and cache folders <<<*****"
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Removed tmp and cache folders <<<*****" >> $Admin_logFile
+      /bin/su - $ORACLE_USER -c "nohup sh $ADMIN_START_SCRIPT >> $Admin_logFile 2>&1 &"
+      launched=false
+      while [ $SECONDS -lt $STARTUP_WAIT ]; do
+        read -t 10 line
+        echo "$line" | egrep "$Admin_Startup_Line" > /dev/null 2>&1
+        if [ $? = 0 ]
+        then
+          ADMIN_PID=`ps -ef | grep java | grep AdminServer | awk '{print $2}'`
+          echo -e "\n***************************************************************************************************************************" >> $Admin_logFile
+          echo -e "AdminServer started successfully on $HOSTNAME with PID:$ADMIN_PID at $(date +%b\ %d,\ %Y\ "%r"\ %Z)" | mail -s " [ WebLogic restart script notification ] [$env] AdminServer started successfully on $HOSTNAME " $To
+          echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>AdminServer started successfully on this instance with PID: $ADMIN_PID <<<****"
+          echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>AdminServer started successfully on this instance with PID: $ADMIN_PID <<<****" >> $Admin_logFile
+          echo "***************************************************************************************************************************" >> $Admin_logFile
+          touch $lockfile
+          launched=true
+          #success
+          echo
+          return 0
+          exit 0
+        fi
+      #done  <  <(tail -n 3 -f "$Admin_logFile")
+      done  <  <(tail -n 3 -F "$Admin_logFile")
+      # Exit the script with a failure if the AdminServer dosen't start within the $STARTUP_WAIT time.
+      if [[ $SECONDS -ge $STARTUP_WAIT ]]; then
+      echo -e "\n***************************************************************************************************************************" >> $Admin_logFile
+      echo -e "AdminServer did not start within $STARTUP_WAIT seconds on $HOSTNAME. Notification timestamp: $(date +%b\ %d,\ %Y\ "%r"\ %Z). Please check the log file to take further action" | mail -s " [ WebLogic restart script notification ] [$env] AdminServer did not startup within $STARTUP_WAIT seconds on $HOSTNAME " $To
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>AdminServer did not start within $STARTUP_WAIT seconds<<<****"
+      echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "****>>>AdminServer did not start within $STARTUP_WAIT seconds<<<****" >> $Admin_logFile
+      echo "***************************************************************************************************************************" >> $Admin_logFile
+      launched=false
+      #failure
+      echo
+      return 1
+      exit 1
+      fi
+    fi
+}
+
+
+stop() {
+
+  # grep for 'AdminServer' pid
+  x=$(ps -ef | grep java | grep AdminServer | wc -l)
+  # else return failure
+  if [[ $x == 0 ]]; then
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "**********>>>AdminServer is NOT running on this instance <<<**********"
+    echo
+    return 3
+  fi
+  # display the pid if its running
+  if [[ $x -ge 1 ]]; then
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) :  "**********>>>AdminServer is running on this instance with PID: $ADMIN_PID <<<**********"
+    echo "*************************************************************************************************************************************" >> $Admin_logFile
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stopping AdminServer<<<*******"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stopping AdminServer<<<*******" >> $Admin_logFile
+    echo "*************************************************************************************************************************************" >> $Admin_logFile
+    echo -e "AdminServer stop script has been initiated on $HOSTNAME at $(date +%b\ %d,\ %Y\ "%r"\ %Z)" | mail -s " [ WebLogic restart script notification ] [$env] AdminServer stop script has been initiated on $HOSTNAME " $To
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stop script Mail notification sent to: $To <<<*******"
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stop script Mail notification sent to: $To <<<*******" >> $Admin_logFile
+    #echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Stopping AdminServer. Check $Admin_logFile for complete AdminServer events log <<<*******" >> $ms_logFile
+    /bin/su - $ORACLE_USER -c "nohup sh $ADMIN_STOP_SCRIPT >> $Admin_logFile 2>&1 &"
+    sleep 200
+  fi
+
+    #validating if the Admin Server is down. If not, killing the Admin PID
+    AdminPID=`ps -ef | grep java | grep AdminServer | awk '{print $2}'`
+    x=$(ps -ef | grep java | grep AdminServer | wc -l)
+        if [ $x -ge 1 ]
+          then
+          echo "***>>>Admin Server is still running on this node on PID: $AdminPID . Killing the PID to stop the service<<<***"
+          echo "***>>>Admin Server is still running on this node on PID: $AdminPID. Killing the PID to stop the service <<<***" >> $Admin_logFile
+          su - $ORACLE_USER -c "kill -9 $AdminPID"
+        fi
+    rm -f $lockfile
+    echo "*************************************************************************************************************************************" >> $Admin_logFile
+    echo $(date +%b\ %d,\ %Y\ "%r"\ %Z) : "*****>>>Exiting AdminServer stop script<<<*******" >> $Admin_logFile
+    echo "*************************************************************************************************************************************" >> $Admin_logFile
+    echo
+    return 0
+    exit 0
+}
+
+reload() {
+        stop
+        wait
+        sleep 10
+        start
+}
+
+restart() {
+        stop
+        wait
+        sleep 10
+        start
+}
+
+status() {
+
+  AdminState=$(sh $fetchserverstate | grep 'AdminServer' | grep 'Current state of' | awk '{print $6}')
+  echo -e "\n\n$(date +%b\ %d,\ %Y\ "%r"\ %Z) :  ***************>>>Current state of 'AdminServer' : $AdminState <<<***************\n\n\n"
+
+
+}
+case "$1" in
+start)
+        start
+        ;;
+
+stop)
+        stop
+        ;;
+
+reload)
+        reload
+        ;;
+
+restart)
+        restart
+        ;;
+
+status)
+        status
+        ;;
+*)
+
+echo $"Usage: $0 {start|stop|reload|restart|status}"
+exit 1
+esac
+
+exit $?

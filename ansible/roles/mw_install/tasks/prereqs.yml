@@ -1,0 +1,187 @@
+---
+- name: Ensure group {{ oracle_install_group_name }} exists
+  group:
+    name: "{{ oracle_install_group_name }}"
+    state: present
+    gid: "{{ oracle_install_group_id }}"
+  tags: [group, user]
+
+- name: Ensure oracle user exists
+  user:
+    name: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    groups: 'games'
+    create_home: True
+    state: present
+    uid: "{{ oracle_user_id }}"
+    password: "{{ ORACLE_USER_PASSWORD | password_hash('sha512') }}"
+    update_password: always
+    shell: /bin/bash
+  tags: user
+
+- name: Import EFS tasks
+  import_tasks: efs.yml
+  tags:
+    - efs
+
+- name: enable optional rpms
+  shell: |
+    yum repolist all
+    yum-config-manager --enable rhel-7-server-rhui-optional-rpms
+  args:
+      warn: false
+  register: repolist
+  tags: rpm
+
+- name: Make sure RPM Packages are Present
+  yum:
+    name: '{{ item }}'
+    state: latest
+  loop: "{{ RPM_PACKAGES }}"
+  tags: rpm
+
+- name: create common directories
+  file:
+    path: "{{ item }}"
+    state: "directory"
+    owner: oracle
+    group: oinstall
+    mode: '775'
+    recurse: yes
+  loop:
+    - "{{ ORACLE_PATH }}"
+    - "{{ ORACLE_HOME }}"
+    - "{{ SCRIPT_HOME }}"
+    - "{{ ORABIN_PATH }}/{{ MW_VERSION }}"
+    - "{{ LOGS_DIR }}"
+    - "{{ ORACLE_TMP }}"
+  tags: [ client, create_dirs]
+
+- name: create AIA TMP directories
+  file:
+    path: "{{ item }}"
+    state: "directory"
+    owner: oracle
+    group: oinstall
+    mode: '775'
+    recurse: yes
+  loop:
+    - "{{ AIA_TMP }}"
+    - "{{ AIA_SHARED }}"
+  when: SUITE == "AIA"
+
+#COMMON_FILES
+- name: Download Common Binaries
+  shell: "wget --continue --progress=dot:mega --tries=0 {{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ item }} -O {{ item }}"
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}"
+  become_user: oracle
+  loop: "{{ BINARY_FILES }}"
+
+#SOA_FILES
+- name: Download SOA Binaries
+  shell: "wget --continue --progress=dot:mega --tries=0 {{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ item }} -O {{ item }}"
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/"
+  become_user: oracle
+  loop: "{{ SOA_FILES }}"
+  when: (SUITE == "SOA") or (SUITE == "AIA")
+
+#OSB_FILES
+- name: Download OSB Binaries
+  shell: "wget --continue --progress=dot:mega --tries=0 {{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ item }} -O {{ item }}"
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/"
+  become_user: oracle
+  loop: "{{ OSB_FILES }}"
+  when: SUITE == "OSB"
+
+#OSM_FILES
+- name: Download OSM Binaries
+  shell: "wget --continue --progress=dot:mega --tries=0 {{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ item }} -O {{ item }}"
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/"
+  become_user: oracle
+  loop: "{{ OSM_FILES }}"
+  when: SUITE == "OSM"
+  tags:
+    - osm_installer
+
+#ODI_FILES
+- name: Download ODI Binaries
+  shell: "wget --continue --progress=dot:mega --tries=0 {{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ item }} -O {{ item }}"
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/"
+  become_user: oracle
+  loop: "{{ ODI_FILES }}"
+  when: (SUITE == "ODI") or (SUITE == "AIA")
+
+#AIA_FILES
+- name: Download AIA Binaries
+  shell: "wget --continue --progress=dot:mega --tries=0 {{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ item }} -O {{ item }}"
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/"
+  become_user: oracle
+  loop: "{{ AIA_FILES }}"
+  when: SUITE == "AIA"
+
+- name: set permissions for {{ ORABIN_PATH }}/{{ MW_VERSION }}
+  file:
+    path: "{{ ORABIN_PATH }}/{{ MW_VERSION }}"
+    owner: oracle
+    group: oinstall
+    mode: '0775'
+    recurse: yes
+  
+- name: setup jdk
+  import_tasks: 'jdk.yml'
+  become_user: oracle
+  tags: jdk
+
+- name: Add java home to system wide PATH variable
+  copy:
+    dest: /etc/profile.d/java-path.sh
+    content: 'PATH={{ JAVA_HOME }}/bin:$PATH'
+  become: yes
+  tags: [jdk, profiled]
+
+- name: Oracle CLient Install
+  import_tasks: oracle_client.yml
+  become_user: oracle
+  tags: client
+
+- name: set oracle bash_profile
+  template:
+    src: bash_profile.j2
+    dest: /home/oracle/.bash_profile
+    mode: '0775'
+    owner: oracle
+    group: oinstall
+  become: yes
+  tags: [jdk, client, bash_profile]
+
+#prereq
+- name: setup swap space if less than 1GB
+  shell: |
+    dd if=/dev/zero of=/swapfile bs=128M count=8
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    swapon -s
+  register: swap
+  when: ansible_memory_mb.swap.total|int < 1000
+  tags: swap
+
+- debug: var=swap.stdout_lines
+  when: ansible_memory_mb.swap.total|int < 1000
+  tags: swap
+
+- name: appd_agent_install
+  import_role:
+    name: appd_agent_install
+  tags: appd_agent
+
+- name: EM13c agent install
+  import_role:
+    name: em13c_agent
+  tags: em13c_agent

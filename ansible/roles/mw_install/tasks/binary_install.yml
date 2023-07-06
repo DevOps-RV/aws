@@ -1,0 +1,180 @@
+---
+- name: Print SUITE
+  debug:
+    msg: "Installation SUITE Selected: {{ SUITE }}"
+  run_once: true
+
+- name: copy /etc/oraInst.loc file
+  template:
+    src: oraInst.loc.j2
+    dest: /etc/oraInst.loc
+    mode: '775'
+  become_user: root
+  
+#Copy Response FIles
+- name: Copy WLS and INFRA response files to the {{ SCRIPT_HOME }}
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{item.dest}}"
+    mode: '+x'
+  loop:
+    - { src: wls.rsp.j2, dest: wls.rsp }
+    - { src: infra.rsp.j2, dest: infra.rsp }
+
+- name: Copy OSB response files to the {{ SCRIPT_HOME }}
+  template:
+    src: OSB.rsp.j2
+    dest: "{{ SCRIPT_HOME }}/OSB.rsp"
+    mode: '+x'
+  when: SUITE == "OSB"
+
+- name: Copy SOA response files to the {{ SCRIPT_HOME }}
+  template:
+    src: SOA.rsp.j2
+    dest: "{{ SCRIPT_HOME }}/SOA.rsp"
+    mode: '+x'
+  when: (SUITE == "SOA") or (SUITE == "AIA")
+
+- name: Copy AIA and ODI response files to the {{ SCRIPT_HOME }}
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{item.dest}}"
+    mode: '+x'
+  when: SUITE == "AIA"
+  loop:
+    - { src: AIA.rsp.j2, dest: AIA.rsp }
+    - { src: ODI.rsp.j2, dest: ODI.rsp }
+
+#- name: Clean tmp dir
+#  shell: rm -rf /tmp/* > /dev/null 2>&1
+#  ignore_errors: yes
+
+#prereq
+- name: setup swap space if less than 1GB
+  shell: |
+    dd if=/dev/zero of=/swapfile bs=128M count=8
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    swapon -s
+  register: swap
+  become_user: root
+  when: ansible_memory_mb.swap.total|int < 1000
+
+- debug: var=swap.stdout_lines
+  when: ansible_memory_mb.swap.total|int < 1000
+  
+- name: Install Weblogic Server
+  shell: "{{ JAVA_HOME }}/bin/java -jar -Djava.io.tmpdir={{ ORACLE_TMP }} {{ ORABIN_PATH }}/{{ MW_VERSION }}/fmw_12.2.1.4.0_wls.jar -silent -responseFile {{ SCRIPT_HOME }}/wls.rsp ORACLE_HOME={{ ORACLE_HOME }} > {{ LOGS_DIR }}/wls_install.log"
+
+- name: Wait until the string "completed" is in the file {{ LOGS_DIR }}/wls_install.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/wls_install.log"
+    search_regex: completed
+        
+- debug:
+    msg: "Completed Weblogic Server Installation"
+    
+- name: Install Weblogic Infra
+  shell: "{{ JAVA_HOME }}/bin/java -jar -Djava.io.tmpdir={{ ORACLE_TMP }} {{ ORABIN_PATH }}/{{ MW_VERSION }}/fmw_12.2.1.4.0_infrastructure.jar -silent -responseFile {{ SCRIPT_HOME }}/infra.rsp ORACLE_HOME={{ ORACLE_HOME }} > {{ LOGS_DIR }}/infra_install.log"
+    
+- name: Wait until the string "completed" is in the file {{ LOGS_DIR }}/infra_install.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/infra_install.log"
+    search_regex: completed
+  register: infra
+    
+- debug:
+    msg: "Completed Weblogic Infra installation"
+
+#Install OSB
+
+- name: Install OSB
+  shell: "{{ JAVA_HOME }}/bin/java -jar -Djava.io.tmpdir={{ ORACLE_TMP }} {{ ORABIN_PATH }}/{{ MW_VERSION }}/fmw_12.2.1.4.0_osb.jar -silent -responseFile {{ SCRIPT_HOME }}/OSB.rsp ORACLE_HOME={{ ORACLE_HOME }} > {{ LOGS_DIR }}/OSB.log"
+  when: SUITE == "OSB"
+
+- name: Wait until the string "completed" is in the file {{ LOGS_DIR }}/OSB.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/OSB.log"
+    search_regex: completed
+  when: SUITE == "OSB"
+    
+- debug:
+    msg: "completed OSB Binary installation"
+  when: SUITE == "OSB"
+
+#Install SOA 
+
+- name: Install SOA binary for SOA or AIA Installation
+  shell: "{{ JAVA_HOME }}/bin/java -jar -Djava.io.tmpdir={{ ORACLE_TMP }} {{ ORABIN_PATH }}/{{ MW_VERSION }}/fmw_12.2.1.4.0_soa.jar -silent -responseFile {{ SCRIPT_HOME }}/SOA.rsp ORACLE_HOME={{ ORACLE_HOME }} > {{ LOGS_DIR }}/SOA.log"
+  when: (SUITE == "SOA") or (SUITE == "AIA")
+
+- name: Wait until the string "completed" is in the file {{ LOGS_DIR }}/SOA.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/SOA.log"
+    search_regex: completed
+  when: (SUITE == "SOA") or (SUITE == "AIA")
+
+- debug:
+    msg: "completed SOA Binary installation"
+  when: (SUITE == "SOA") or (SUITE == "AIA")
+
+#Install AIA
+
+- name: Install AIA binary for AIA Installation
+  shell: "{{ JAVA_HOME }}/bin/java -jar -Djava.io.tmpdir={{ ORACLE_TMP }} {{ ORABIN_PATH }}/{{ MW_VERSION }}/comms_home_installer_generic.jar -silent -responseFile {{ SCRIPT_HOME }}/AIA.rsp ORACLE_HOME={{ AIA_HOME }} > {{ LOGS_DIR }}/AIA.log"
+  when: SUITE == "AIA"
+
+- name: Wait until the string "successful" is in the file {{ LOGS_DIR }}/AIA.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/AIA.log"
+    search_regex: successful
+  when: SUITE == "AIA"
+
+- debug:
+    msg: "completed AIA Binary installation"
+  when: SUITE == "AIA"
+
+#Install ODI
+- name: Install ODI binary for AIA Installation
+  shell: "{{ JAVA_HOME }}/bin/java -jar -Djava.io.tmpdir={{ ORACLE_TMP }} {{ ORABIN_PATH }}/{{ MW_VERSION }}/fmw_12.2.1.4.0_odi.jar -silent -responseFile {{ SCRIPT_HOME }}/ODI.rsp ORACLE_HOME={{ ODI_HOME }} > {{ LOGS_DIR }}/ODI.log"
+  when: SUITE == "AIA"
+
+- name: Wait until the string "successful" is in the file {{ LOGS_DIR }}/ODI.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/ODI.log"
+    search_regex: successful
+  when: SUITE == "AIA"
+
+- debug:
+    msg: "Oracle Data Integrator 12.2.1.4.0 completed successfully"
+  when: SUITE == "AIA"
+
+#Disable Derby
+- name: disable derby jar
+  shell: mv derby.jar disable_derby.jar
+  args:
+    chdir: "{{ ORACLE_HOME }}/wlserver/common/derby/lib"
+
+#OPTACH UPGRADE
+- name: Unarchive Opatch {{ OPATCH_NUMBER }}
+  unarchive:
+    src: "{{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/patch/{{ OPATCH_NUMBER }}.tar.gz"
+    dest: "{{ ORABIN_PATH }}/{{ MW_VERSION }}"
+    mode: +x
+    remote_src: yes
+  tags: upgrade_optach
+
+- name: Upgrade Opatch
+  shell: "{{ JAVA_HOME }}/bin/java -jar -Djava.io.tmpdir={{ ORACLE_TMP }} opatch_generic.jar -silent oracle_home={{ ORACLE_HOME }} > {{ LOGS_DIR }}/Opatch_upgrade.log"
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/{{ OPATCH_NUMBER }}"
+  tags: upgrade_optach
+  ignore_errors: True
+
+- name: Wait until the string "completed" is in the file {{ LOGS_DIR }}/Opatch_upgrade.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/Opatch_upgrade.log"
+    search_regex: completed
+  tags: upgrade_optach
+  ignore_errors: True

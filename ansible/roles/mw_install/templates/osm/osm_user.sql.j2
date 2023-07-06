@@ -1,0 +1,12 @@
+GRANT CREATE ANY CONTEXT TO SYS WITH ADMIN OPTION;
+GRANT CREATE ANY CONTEXT TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT CREATE ANY VIEW TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT CREATE SNAPSHOT TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT CREATE SYNONYM TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT CREATE TABLE TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT CREATE USER TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT CREATE VIEW TO {{ osm_db_admin_user | upper }} WITH ADMIN OPTION;
+GRANT CREATE MATERIALIZED VIEW to {{ osm_db_admin_user | upper }};
+GRANT SELECT ANY DICTIONARY to {{ osm_db_admin_user | upper }};
+GRANT CREATE SESSION to {{ osm_db_admin_user | upper }};
+exit;

@@ -1,0 +1,9 @@
+#!/bin/bash
+# File to store the credentials
+props_file=/home/oracle/OSService_WLS/domain.properties
+
+# {{ MW_HOSTS }} ENV credentials
+
+echo "wluser={{ WEBLOGIC_USERNAME }}" >> $props_file
+echo "wlpwd={{ WEBLOGIC_PASSWORD }}" >> $props_file
+echo "env={{ MW_HOSTS }}" >> $props_file

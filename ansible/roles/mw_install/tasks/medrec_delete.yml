@@ -1,0 +1,32 @@
+---
+- name: SET Facts for OSB
+  set_fact:
+    MEDREC_SERVER: osb_server1
+  when: SUITE == "OSB"
+
+- name: SET Facts for SOA or OSB
+  set_fact:
+    MEDREC_SERVER: soa_server1
+  when: (SUITE == "SOA") or (SUITE == "AIA")
+
+- name: Copy DeleteServer.py files to the {{ SCRIPT_HOME }}
+  template:
+    src: DeleteServer.py.j2
+    dest: "{{ SCRIPT_HOME }}/DeleteServer.py"
+    mode: '+x'
+
+- name: "invoke DeleteServer.py with WLST to delete the {{ MEDREC_SERVER }}"
+  shell: |
+    . ./setWlstEnv.sh
+    java weblogic.WLST {{ SCRIPT_HOME }}/DeleteServer.py > {{ LOGS_DIR }}/medrec.log
+  args:
+    chdir: "{{ ORACLE_HOME }}/oracle_common/common/bin/"
+
+- name: Wait until the string "completed" is in the file {{ LOGS_DIR }}/medrec.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/medrec.log"
+    search_regex: completed
+
+- name: "Medrec Server Delete"
+  debug:
+    msg: "Deleted {{ MEDREC_SERVER }}"

@@ -1,0 +1,35 @@
+---
+- name: "Admin Server Template Create using PACK"
+  shell: |
+    export oh={{ ORACLE_HOME }}
+    {{ ORACLE_HOME }}/oracle_common/common/bin/pack.sh -domain={{ A_SERVER }}/{{ DOMAIN_NAME }} -managed=true -template={{ A_SERVER }}/{{ DOMAIN_NAME }}/templates/{{ SUITE }}_{{ ENV }}_domain_template.jar -template_name={{ SUITE }}_{{ ENV }}_domain_template -log={{ A_SERVER }}/{{ DOMAIN_NAME }}/templates/pack.log -log_priority=debug > {{ LOGS_DIR }}/pack.log
+  async: 700
+  register: PACK
+
+- name: Wait until the string "completed" is in the file {{ LOGS_DIR }}/pack.log before continuing
+  wait_for:
+    path: "{{ LOGS_DIR }}/pack.log"
+    search_regex: "succeed: close template"
+    
+- name: "Admin Server Template Create using PACK"
+  debug:
+    msg: "write template Pack Operation Completed"
+    
+- name: Verify Jar file exists after PACK Operation
+  stat:
+    path: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/templates/{{ SUITE }}_{{ ENV }}_domain_template.jar"
+  register: jar
+
+- name: fail if {{ SUITE }}_{{ ENV }}_domain_template.jar didn't generated
+  fail:
+    msg: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/templates/{{ SUITE }}_{{ ENV }}_domain_template.jar Didn't exist"
+  when: jar.stat.exists == False
+
+- name: push the {{ SUITE }}_{{ ENV }}_domain_template.jar to artifactory
+  shell: |
+    cd {{ A_SERVER }}/{{ DOMAIN_NAME }}/templates
+    curl -u{{ ARTIFACTORY_USER }}:{{ ARTIFACTORY_PASSWORD }} {{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ SUITE }}_{{ ENV }}_domain_template.jar -T "{{ SUITE }}_{{ ENV }}_domain_template.jar"
+  register: upload_jar
+
+- debug: var=upload_jar.stdout_lines
+

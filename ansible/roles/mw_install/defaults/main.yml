@@ -1,0 +1,227 @@
+ORACLE_PATH: /opt/oracle
+AIA_HOME: "{{ ORACLE_PATH }}/aia/aia122"
+AIA_TMP: "{{ ORACLE_PATH }}/aia/tmp"
+ORACLE_HOME: "{{ ORACLE_PATH }}/fmw12214"
+ORACLE_CLIENT_HOME: "{{ ORACLE_PATH }}/client"
+ORACLE_BASE: "{{ ORACLE_PATH }}/database"
+JAVA_HOME: "{{ ORACLE_PATH }}/jdk"
+SCRIPT_HOME: "{{ ORACLE_PATH }}/installation_scripts"
+INVENTORY_LOC: "{{ ORACLE_PATH }}/oraInventory"
+LOGS_DIR: "{{ ORACLE_PATH }}/installation_logs"
+ORACLE_TMP: "{{ ORACLE_PATH }}/tmp"
+BACKUP_PATH: "{{ ORACLE_PATH }}/backup"
+CLIENT_INVENTORY_LOC: "{{ INVENTORY_LOC }}"
+DOMAIN_MOUNT_POINT: "{{ DOMAIN_HOME }}"
+UNIX_GROUP_NAME: oinstall
+OPATCH_HOME: "{{ ORACLE_HOME }}/OPatch"
+ORABIN_PATH: "{{ ORACLE_PATH }}/software"
+OSService_WLS: /home/oracle/OSService_WLS
+
+#OSM
+DESIGN_STUDIO_HOME: "{{ ORACLE_PATH }}/DesignStudio"
+ANT_HOME: "{{ ORACLE_PATH }}/{{ ANT_VERSION }}"
+ANT_VERSION: apache-ant-1.9.16
+ANT_URL: "https://dlcdn.apache.org//ant/binaries/{{ ANT_VERSION }}-bin.tar.gz"
+
+#Domain Paths
+DOMAIN_HOME: "{{ ORACLE_PATH }}/fmw_domains"
+M_SERVER: "{{ DOMAIN_HOME }}/mserver"
+A_SERVER: "{{ DOMAIN_HOME }}/aserver"
+CLUSTER: "{{ DOMAIN_HOME }}/cluster"
+AIA_SHARED: "{{ DOMAIN_HOME }}/cluster/aiashared"
+WEBLOGIC_USERNAME: weblogic
+
+ORACLE_GID: 1002
+ORACLE_UID: 1002
+
+#efs
+oracle_cluster_efs_access_point_path: "/oracle-shared-cluster-fs"
+oracle_aserver_efs_access_point_path: "/oracle-shared-aserver-fs"
+efs_stack_name_aserver: "{{ aws_profile }}-{{ SUITE }}-EFS-Access-point-AServer"
+efs_stack_name_cluster: "{{ aws_profile }}-{{ SUITE }}-EFS-Access-point-Cluster"
+
+#PORTS
+MW_ADMIN_PORT: 7001
+MS_PORT: 8001
+MW_NM_PORT: 5556
+DB_PORT: 1521
+ODI_DB_PORT: "{{ DB_PORT }}"
+ODI_DOMAIN_PORT: 7777
+ODI_AABC_AGENT_PORT: "{{ ODI_DOMAIN_PORT }}"
+FRONTEND_HTTP_PORT: 80
+FRONTEND_HTTPS_PORT: 443
+#ODI
+ODI_HOME: "{{ ORACLE_PATH }}/odi"
+ODI_EXPORTED_DVMS: "{{ ODI_HOME }}/OracleODI_12C/ExportDVM"
+
+ARTIFACTORY_URL: https://test-artifactory.com/artifactory/mw-binaries
+MW_VERSION: FMW12.2.1.4
+
+JDK_VERSION: jdk1.8.0_321
+JDK_TAR: jdk-8u321-linux-x64.tar.gz   
+ORACLE_CLIENT_ZIP: linuxx64_12201_client.zip
+
+RPM_PACKAGES:
+  - binutils
+  - gcc
+  - gcc-c++
+  - glibc
+  - glibc-devel
+  - libaio
+  - libaio-devel
+  - libgcc
+  - libstdc++
+  - libstdc++-devel
+  - sysstat
+  - motif
+  - motif-devel
+  - redhat-lsb
+  - redhat-lsb-core
+  - openssl
+  - make
+  - unzip
+#  - libnsl
+
+OPTIONAL_PACKAGES:
+  - compat-libcap1
+  - compat-libstdc++-33
+  - dejavu-serif-fonts
+  - ksh
+  - xorg-x11-utils
+
+RCU_COMPONENT:
+  SOA:
+    - STB
+    - IAU_APPEND
+    - OPSS
+    - ESS
+    - UCSUMS
+    - SOAINFRA
+    - IAU
+    - MDS
+    - IAU_VIEWER
+    - WLS
+  OSB:
+    - STB
+    - IAU_APPEND
+    - OPSS
+    - ESS
+    - UCSUMS
+    - SOAINFRA
+    - IAU
+    - MDS
+    - IAU_VIEWER
+    - WLS
+  AIA:
+    - STB
+    - IAU_APPEND
+    - OPSS
+    - ESS
+    - UCSUMS
+    - SOAINFRA
+    - IAU
+    - MDS
+    - IAU_VIEWER
+    - WLS
+  ODI:
+    - STB
+    - WLS
+    - ODI
+  OSM:
+    - STB
+    - OPSS
+    - IAU
+    - IAU_VIEWER
+    - IAU_APPEND
+
+SYSDB_USER: admin
+SYSDB_USER_ROLE: normal
+XREF_SCHEMA_NAME: AIA_COMMS_XREF
+
+#SIEBEL
+SBL_VERSION: 17.0
+SBL_PORT: 7777
+
+#BRM
+BRM_VERSION: 12.3
+BRM_PRIMARY_CM_PORT: 11960
+
+#OSM
+OSM_VERSION: 7.3.5.1.6
+OSM_CFS_WL_JMS_QUEUE_ACCESS_USER: osm
+OSM_CFS_ADMIN_USER: osm
+OSM_PROV_WL_JMS_QUEUE_ACCESS_USER: osmlf
+OSM_PROV_ADMIN_USER: osmlf
+OSM_INSTALLER_BIN: osm_7.4.1.0.3_InstallLinux.bin
+
+#PATCH
+PATCH_LIST:
+  SOA:
+    - 30613424
+    - 30499299
+    - 32656931
+    - 32957445
+    - 33416868
+    - 33671996
+  AIA:
+    - 30613424
+    - 30499299
+    - 32656931
+    - 32957445
+    - 33416868
+    - 33671996
+    - 28404153
+    - 30729380
+    - 33286160
+  OSB:
+    - 31219421
+    - 31710210
+    - 32372444
+    - 32412306
+    - 32465432
+    - 32710497
+    - 32897747
+    - 30806685
+    - 30292758
+    - 33286160
+    - 33416868
+    - 33671996
+    - 31573507
+  OSM:
+    - 33286160
+    - 33416868
+    - 33671996
+
+
+OPATCH_NUMBER: 6880880
+
+#FILES
+BINARY_FILES:
+  - fmw_12.2.1.4.0_infrastructure.jar 
+  - fmw_12.2.1.4.0_wls.jar
+  - "{{ JDK_TAR }}"
+  - "{{ ORACLE_CLIENT_ZIP }}"
+
+#AIA and SOA
+SOA_FILES:
+  - fmw_12.2.1.4.0_soa.jar    
+
+OSB_FILES:
+  - fmw_12.2.1.4.0_osb.jar
+
+OSM_FILES:
+  - "{{ OSM_INSTALLER_BIN }}"
+  - jdk-7u80-linux-x64.tar.gz
+
+ODI_FILES:
+  - fmw_12.2.1.4.0_odi.jar
+
+AIA_FILES:
+  - comms_home_installer_generic.jar
+
+# OSM
+osm_jdk7_base: /opt/jdk7
+osm_install_location: "{{ ORACLE_PATH }}/osm"
+osm_install_temp_dir: "{{ ORACLE_PATH }}/osm/temp"
+osm_install_log: "{{ osm_install_location }}/osmInstallLog.txt"
+osm_install_launch_log: "{{ LOGS_DIR }}/osmlaunch.log"

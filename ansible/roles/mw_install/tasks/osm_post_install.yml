@@ -1,0 +1,195 @@
+#Communications Order and Service Management Cartridge Guide for Oracle Application Integration Architecture
+- name: OSM | Download DesignStudio.tar.gz
+  ansible.builtin.shell: "wget --continue --progress=dot:mega --tries=0 {{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/osm/{{ item }} -O {{ item }}"
+  loop:
+    - DesignStudio.tar.gz 
+  args:
+    chdir: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/"
+  tags: DesignStudio
+
+- name: OSM | Remove {{ DESIGN_STUDIO_HOME }} if present
+  ansible.builtin.file:
+    state: absent
+    path: "{{ DESIGN_STUDIO_HOME }}"
+  become: yes
+  become_user: root
+  tags: DesignStudio
+
+- name: OSM | Unarchive OSM DesignStudio Code for CICD
+  ansible.builtin.unarchive:
+    src: "{{ ORABIN_PATH }}/{{ MW_VERSION }}/DesignStudio.tar.gz"
+    dest: "{{ ORACLE_PATH }}/"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '0755'
+    remote_src: yes
+    list_files: yes
+  tags: DesignStudio
+
+- name: OSM | Install {{ ANT_VERSION }}
+  ansible.builtin.unarchive:
+    src: "{{ ARTIFACTORY_URL }}/{{MW_VERSION }}/osm/{{ ANT_VERSION }}-bin.tar.gz"
+    dest: "{{ ORACLE_PATH }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '750'
+    remote_src: yes
+    list_files: yes
+  tags: ant
+
+- name: OSM | Check ant version
+  ansible.builtin.shell: |
+    export JAVA_HOME={{ JAVA_HOME }}    
+    export ANT_HOME={{ ANT_HOME }}
+    export PATH=$JAVA_HOME/bin:$ANT_HOME/bin:$PATH
+    ant -version
+  register: ant_out
+  tags: ant
+
+- name: OSM | Display ant output
+  ansible.builtin.debug:
+    var: ant_out.stdout_lines
+  tags: ant
+
+- name: OSM | Encrypt the WebLogic Server Administrator Password
+  ansible.builtin.shell: |
+    . ./setDomainEnv.sh
+    java weblogic.security.Encrypt {{ AIA_WEBLOGIC_PASSWORD }}
+  args:
+    chdir: "{{ A_SERVER }}/{{ DOMAIN_NAME }}/bin"
+  register: AIA_WEBLOGIC_ENCRYPT_PASSWORD
+  tags: [storeuserconfig, encrypt_pass, resource_deploy_ootb]
+
+- name: OSM | copy build.properties to DesignStudio and pass encrypt scripts
+  ansible.builtin.template:
+    src: "osm/{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '+x'
+    backup: yes
+  loop:
+    - { src: build.properties.j2, dest: "{{ DESIGN_STUDIO_HOME }}/headlessBuild/build.properties" }
+    - { src: pass_encrypt_admin.j2, dest: "{{ SCRIPT_HOME }}/pass_encrypt_admin.sh" }
+    - { src: pass_encrypt_osmadm.j2, dest: "{{ SCRIPT_HOME }}/pass_encrypt_osmadm.sh" }
+    - { src: pass_encrypt_cmt.j2, dest: "{{ SCRIPT_HOME }}/pass_encrypt_cmt.sh" }
+    - { src: storeUserConfig.j2, dest: "{{ SCRIPT_HOME }}/storeUserConfig.py" }
+  tags: [storeuserconfig, encrypt_pass, resource_deploy_ootb]
+
+- name: OSM | Remove security dir if present
+  ansible.builtin.file:
+    state: absent
+    path: "{{ DESIGN_STUDIO_HOME }}/headlessBuild/security"
+  become: yes
+  tags: encrypt_pass
+
+- name: OSM | create security directory in headlessBuild
+  ansible.builtin.file:
+    state: directory
+    path: "{{ DESIGN_STUDIO_HOME }}/headlessBuild/security"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '750'
+  become: yes
+  tags: encrypt_pass
+
+- name: Make sure expect is present
+  ansible.builtin.yum:
+    name: 
+      - expect
+    state: present
+  become: yes
+  become_user: root
+  tags: encrypt_pass
+
+- name: OSM | Encrypting the WebLogic Server Administrator  & osmadm Password for Connecting to WebLogic
+  ansible.builtin.shell: |
+    export JAVA_HOME={{ JAVA_HOME }}
+    export ANT_HOME={{ ANT_HOME }}
+    export PATH=$JAVA_HOME/bin:$ANT_HOME/bin:$PATH;
+    ./pass_encrypt_admin.sh | tee {{ LOGS_DIR }}/pass_encrypt_admin.log
+    ./pass_encrypt_osmadm.sh | tee {{ LOGS_DIR }}/pass_encrypt_osmadm.log
+    ./pass_encrypt_cmt.sh | tee {{ LOGS_DIR }}/pass_encrypt_cmt.log
+  args:
+    chdir: "{{ SCRIPT_HOME }}"
+  register: encrypt_pass
+  tags: encrypt_pass
+
+- ansible.builtin.debug:
+    var: encrypt_pass.stdout_lines
+  tags: encrypt_pass
+
+- name: Wait for the BUILD SUCCESSFUL message
+  wait_for:
+    path: "{{ LOGS_DIR }}/{{ item }}"
+    search_regex: '(BUILD SUCCESSFUL)'
+  loop:
+    - pass_encrypt_admin.log
+    - pass_encrypt_osmadm.log
+    - pass_encrypt_cmt.log
+  tags: encrypt_pass
+
+- name: OSM | storeUserConfig
+  ansible.builtin.shell: |
+    . ./setWlstEnv.sh
+    java weblogic.WLST {{ SCRIPT_HOME }}/storeUserConfig.py | tee {{ LOGS_DIR }}/storeUserConfig.log
+  args:
+    chdir: "{{ ORACLE_HOME }}/oracle_common/common/bin/"
+  tags: storeuserconfig
+  register: storeuserconfig
+
+- ansible.builtin.debug:
+    var: storeuserconfig.stdout_lines
+  tags: storeuserconfig
+
+- name: Make sure ksh is present
+  ansible.builtin.yum:
+    name: 
+      - ksh
+      - Xvfb
+    state: present
+  become: yes
+  become_user: root
+  tags: resource_deploy_ootb
+  
+- name: OSM | OOTB | Building the Solution Cartridges and Configuring the WebLogic Server Resources 
+  ansible.builtin.shell: |
+    export JAVA_HOME={{ JAVA_HOME }}
+    export ANT_HOME={{ ANT_HOME }}
+    export PATH=$JAVA_HOME/bin:$ANT_HOME/bin:$PATH;
+    ant -debug headless.build.resource.deploy | tee {{ LOGS_DIR }}/resource_deploy.log
+  args:
+    chdir: "{{ DESIGN_STUDIO_HOME }}/headlessBuild"
+    executable: /usr/bin/ksh
+  register: resource_deploy
+  tags: resource_deploy_ootb
+
+- ansible.builtin.debug:
+    var: resource_deploy.stdout_lines
+  tags: resource_deploy_ootb
+
+#Create User and Groups
+- name: OSM | Render Users Groups repsonse files
+  ansible.builtin.template:
+    src: "osm/{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '755'
+    backup: yes
+  loop:
+    - { src: 'create_groups.py.j2', dest: 'create_groups.py' }
+    - { src: 'createUsersAndGroups.properties.j2', dest: 'createUsersAndGroups.properties' }
+  tags: osm_create_users
+
+- name: OSM | create groups and users
+  ansible.builtin.shell: ./wlst.sh {{ SCRIPT_HOME }}/create_groups.py | tee {{ LOGS_DIR }}/create_groups.log
+  args:
+    chdir: "{{ ORACLE_HOME }}/oracle_common/common/bin/"
+  register: osm_create_users
+  async: 500
+  tags: osm_create_users
+
+- ansible.builtin.debug:
+    var: osm_create_users.stdout_lines
+  tags: osm_create_users

@@ -1,0 +1,2 @@
+connect('{{ WEBLOGIC_USERNAME }}', '{{ WEBLOGIC_PASSWORD }}', 't3://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}')
+storeUserConfig('{{ DESIGN_STUDIO_HOME }}/headlessBuild/security/osmAdminConfigFile.secure','{{ DESIGN_STUDIO_HOME }}/headlessBuild/security/osmAdminKeyFile.secure')

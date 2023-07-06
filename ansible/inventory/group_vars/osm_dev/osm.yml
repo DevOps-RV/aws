@@ -1,0 +1,88 @@
+---
+
+#MW
+ENV: DEV
+DOMAIN_NAME: osm_domain_01
+CLUSTER_NAME: osm_cluster
+LOCAL_LOAD_BALANCER: 
+ASXMXXMS: 2
+MSXMXXMS: 4
+
+#OSM DB
+DB_HOST_NAME: 
+DB_NAME: 
+RCU_SCHEMA_PREFIX: OSM
+DB_TABLESPACE: OSM
+DB_USER: admin
+
+
+aws_region: us-east-2
+aws_profile: aws-dev
+oracle_aserver_efs_fs_id: fs-12345
+oracle_cluster_efs_fs_id: fs-12345
+
+#BEA-parameter
+osm_weblogic_admin_server: "{{ inventory_hostname }}"
+osm_weblogic_admin_port: 7001
+osm_coherence_cluster_name: osmCoherenceCluster5354
+osm_coherence_unicast_port: 17001
+osm_connection_pool_capacity_increment: 1
+osm_connection_pool_initial_capacity: 15
+osm_connection_pool_maximum_capacity: 54
+osm_frontend_http_port: 80
+osm_frontend_https_port: 443
+osm_frotend_host: "{{ LOCAL_LOAD_BALANCER }}"
+osm_jms_store_type: File
+osm_jms_timeout_value: 2400
+osm_admin_user: osmadm
+osm_db_timezone_offset: -18000
+osm_wls_server_name: "{{ CLUSTER_NAME }}"
+osm_wls_server_port: 8001
+osm_oracle_sid: "{{ DB_NAME }}"
+osm_oracle_server_host: "{{ DB_HOST_NAME }}"
+osm_oracle_server_port: 1521
+osm_studio_admin_user: osmadm
+osm_weblogic_system_user: "{{ WEBLOGIC_USERNAME }}"
+osm_well_known_address_listen_address: "{{ inventory_hostname }}"
+osm_schema_username: OSMORDER
+
+
+#OSM-parameter
+osm_notification_email_address: osmadm@domain.com
+osm_notification_email_server: www.domain.com
+osm_notification_rows_per_page: 50
+osm_notification_rows_retrived: 500
+osm_notification_server_port: 8101
+osm_query_rows_per_page: 50
+osm_query_rows_retrived: 500
+osm_read_only_field_length: 50
+osm_remark_change_timeout: 50
+osm_server_domain_suffix: domain.com
+osm_server_session_timeout: 45
+osm_wls_server_ssl_port: 7002
+
+#DB-parameter
+osm_db_admin_user: OSM_INSTALL_USER
+osm_db_default_tablespace: OSM_DATA
+osm_db_model_data_tablespace: OSM_DATA
+osm_db_order_index_tablespace: OSM_LARGE_INDEX
+osm_db_number_of_subpartitions: 16
+osm_db_orders_per_partition: 900000
+osm_db_use_partitioning: 'true'
+osm_db_reporting_schema_username: OSMORDER_REPORTS
+osm_db_rule_engine_schema_username: OSMORDER_RULE
+
+
+#AppD
+appdynamics:
+  applicationName: dev
+  tierName: osm
+app_agent: 'true'
+machine_agent: 'true'
+controller_env: nonprod
+region: ohio
+
+cmt_username: cmtuser
+aia_saf_urls: aia_host1:8001
+aia_admin_host: 
+aia_ms_hosts: aia_host1:18001,aia_host2:8001

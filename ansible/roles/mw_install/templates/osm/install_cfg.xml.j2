@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OSM-Installation-Configuration>
+    <BEA-Parameters>
+        <BEA-parameter>
+            <parameter-label>BEA-WebLogic-Host</parameter-label>
+            <parameter-value>{{ osm_weblogic_admin_server }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>BEA-WebLogic-Port</parameter-label>
+            <parameter-value>{{ osm_weblogic_admin_port }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Coherence-Cluster-Name</parameter-label>
+            <parameter-value>{{ osm_coherence_cluster_name }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Coherence-Cluster-Unicast-Port</parameter-label>
+            <parameter-value>{{ osm_coherence_unicast_port }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Configure-BEA-WebLogic</parameter-label>
+            <parameter-value>Yes</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Configure-Job-Orders</parameter-label>
+            <parameter-value>true</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Connection-Pool-Capacity-Increment</parameter-label>
+            <parameter-value>{{ osm_connection_pool_capacity_increment }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Connection-Pool-Initial-Capacity</parameter-label>
+            <parameter-value>{{ osm_connection_pool_initial_capacity }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Connection-Pool-Maximum-Capacity</parameter-label>
+            <parameter-value>{{ osm_connection_pool_maximum_capacity }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Create-Coherence-Config</parameter-label>
+            <parameter-value>true</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Frontend-HTTP-Port</parameter-label>
+            <parameter-value>{{ osm_frontend_http_port }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Frontend-HTTPS-Port</parameter-label>
+            <parameter-value>{{ osm_frontend_https_port }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Frontend-Host</parameter-label>
+            <parameter-value>{{ osm_frotend_host }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>JMS-Store-Type</parameter-label>
+            <parameter-value>{{ osm_jms_store_type }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>JTA-Timeout-Value</parameter-label>
+            <parameter-value>{{ osm_jms_timeout_value }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Number-Coherence-Well-Known-Addresses</parameter-label>
+            <parameter-value>1</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>OSM-Administrator-Password</parameter-label>
+            <parameter-value>{{ osm_admin_password }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>OSM-Administrator-User</parameter-label>
+            <parameter-value>{{ osm_admin_user }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>OSM-Automation-Password</parameter-label>
+            <parameter-value>{{ osm_automation_password }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>OSM-Database-Timezone-Offset</parameter-label>
+            <parameter-value>{{ osm_db_timezone_offset }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>OSM-Internal-Password</parameter-label>
+            <parameter-value>{{ osm_internal_password }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>OSM-WLS-Server-Name</parameter-label>
+            <parameter-value>{{ osm_wls_server_name }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>OSM-WLS-Server-Port</parameter-label>
+            <parameter-value>{{ osm_wls_server_port }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Oracle-SID</parameter-label>
+            <parameter-value>{{ osm_oracle_sid }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Oracle-Server-Host</parameter-label>
+            <parameter-value>{{ osm_oracle_server_host }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Oracle-Server-Port</parameter-label>
+            <parameter-value>{{ osm_oracle_server_port }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Start-Oms-Ear</parameter-label>
+            <parameter-value>true</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Studio-Admin-Password</parameter-label>
+            <parameter-value>{{ osm_studio_admin_password }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Studio-Admin-User</parameter-label>
+            <parameter-value>{{ osm_studio_admin_user }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Switch-Database</parameter-label>
+            <parameter-value>No</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>WebLogic-System-Password</parameter-label>
+            <parameter-value>{{ osm_weblogic_system_password }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>WebLogic-System-User</parameter-label>
+            <parameter-value>{{ osm_weblogic_system_user }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>Well-Known-Address-Listen-Address-1</parameter-label>
+            <parameter-value>{{ osm_well_known_address_listen_address }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>schema_password</parameter-label>
+            <parameter-value>{{ osm_schema_password }}</parameter-value>
+        </BEA-parameter>
+        <BEA-parameter>
+            <parameter-label>schema_username</parameter-label>
+            <parameter-value>{{ osm_schema_username }}</parameter-value>
+        </BEA-parameter>
+    </BEA-Parameters>
+    <OSM-Parameters>
+        <OSM-parameter>
+            <parameter-label>Attachment-Path</parameter-label>
+            <parameter-value>Attachment</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Display-Namespace-Version</parameter-label>
+            <parameter-value>1</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Event-Buffer-Interval</parameter-label>
+            <parameter-value>3</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Handler-Factory</parameter-label>
+            <parameter-value>com.mslv.oms.handler.cluster.ClusteredHandlerFactory</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Landing-Page</parameter-label>
+            <parameter-value>worklist</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Max-Delay-Processor-Count</parameter-label>
+            <parameter-value>10</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Max-Rule-Processor-Count</parameter-label>
+            <parameter-value>10</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Maximum-Attachment-Size</parameter-label>
+            <parameter-value>1024</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Notification-Email-Address</parameter-label>
+            <parameter-value>{{ osm_notification_email_address }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Notification-Email-Server</parameter-label>
+            <parameter-value>{{ osm_notification_email_server }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Notification-Rows-Retrieved</parameter-label>
+            <parameter-value>{{ osm_notification_rows_retrived }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Notification-Rows-per-Page</parameter-label>
+            <parameter-value>{{ osm_notification_rows_per_page }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Notification-Server-Port</parameter-label>
+            <parameter-value>{{ osm_notification_server_port }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Query-Rows-Retrieved</parameter-label>
+            <parameter-value>{{ osm_query_rows_retrived }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Query-Rows-per-Page</parameter-label>
+            <parameter-value>{{ osm_query_rows_per_page }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Read-Only-Field-Length</parameter-label>
+            <parameter-value>{{ osm_read_only_field_length }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Remark-Change-Timeout</parameter-label>
+            <parameter-value>{{ osm_remark_change_timeout }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Server-Domain-Suffix</parameter-label>
+            <parameter-value>{{ osm_server_domain_suffix }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Session-Timeout</parameter-label>
+            <parameter-value>{{ osm_server_session_timeout }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Support-Cluster</parameter-label>
+            <parameter-value>0</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Task-Processor-Interval</parameter-label>
+            <parameter-value>50</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>WLS-Server-SSL-Port</parameter-label>
+            <parameter-value>{{ osm_wls_server_ssl_port }}</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Worklist-Rows-Retrieved</parameter-label>
+            <parameter-value>500</parameter-value>
+        </OSM-parameter>
+        <OSM-parameter>
+            <parameter-label>Worklist-Rows-per-Page</parameter-label>
+            <parameter-value>50</parameter-value>
+        </OSM-parameter>
+    </OSM-Parameters>
+    <DB-Parameters>
+        <DB-parameter>
+            <parameter-label>Analyze-Database-Schema</parameter-label>
+            <parameter-value>No</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Create-Or-Upgrade-Database-Schema</parameter-label>
+            <parameter-value>Create</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Database-Admin-Password</parameter-label>
+            <parameter-value>{{ osm_db_admin_password }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Database-Admin-Username</parameter-label>
+            <parameter-value>{{ osm_db_admin_user }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Default-Tablespace</parameter-label>
+            <parameter-value>{{ osm_db_default_tablespace }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Error-Property</parameter-label>
+            <parameter-value>dbm.error</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Existing-Schema-Action</parameter-label>
+            <parameter-value>upgrade</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Halt-on-Error</parameter-label>
+            <parameter-value>true</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Halt-on-Warning</parameter-label>
+            <parameter-value>true</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Model-Data-Tablespace</parameter-label>
+            <parameter-value>{{ osm_db_model_data_tablespace }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Model-Index-Tablespace</parameter-label>
+            <parameter-value>OSM_INDEX</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Order-Data-Tablespace</parameter-label>
+            <parameter-value>OSM_LARGE_DATA</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Order-Index-Tablespace</parameter-label>
+            <parameter-value>{{ osm_db_order_index_tablespace }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Reporting-Schema-Password</parameter-label>
+            <parameter-value>{{ osm_db_reporting_schema_password }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Reporting-Schema-Username</parameter-label>
+            <parameter-value>{{ osm_db_reporting_schema_username }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>RuleEngine-Schema-Password</parameter-label>
+            <parameter-value>{{ osm_db_rule_engine_schema_password }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>RuleEngine-Schema-Username</parameter-label>
+            <parameter-value>{{ osm_db_rule_engine_schema_username }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Temporary-Tablespace</parameter-label>
+            <parameter-value>TEMP</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Use-Localized-Data</parameter-label>
+            <parameter-value>false</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Warning-Property</parameter-label>
+            <parameter-value>dbm.warning</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Number-of-Subpartitions</parameter-label>
+            <parameter-value>{{ osm_db_number_of_subpartitions }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Orders-per-Partition</parameter-label>
+            <parameter-value>{{ osm_db_orders_per_partition }}</parameter-value>
+        </DB-parameter>
+        <DB-parameter>
+            <parameter-label>Use-Partitioning</parameter-label>
+            <parameter-value>{{ osm_db_use_partitioning }}</parameter-value>
+        </DB-parameter>
+    </DB-Parameters>
+</OSM-Installation-Configuration>

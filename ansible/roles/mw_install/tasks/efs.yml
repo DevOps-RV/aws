@@ -1,0 +1,119 @@
+---
+- name: EFS | Ensure efs utils is installed
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - nfs-utils
+    - amazon-efs-utils
+    - gcc
+    - openssl-devel
+    - tcp_wrappers-devel
+    - stunnel
+
+- name: pip3 install botocore
+  pip:
+    name: botocore
+    executable: pip3
+  tags:
+    - botocore
+
+- name: Disable stunnel host name check
+  lineinfile:
+    path: /etc/amazon/efs/efs-utils.conf
+    regexp: '^stunnel_check_cert_hostname(.*)$'
+    line: 'stunnel_check_cert_hostname = false'
+  tags:
+    - efs_conf
+
+- name: Ensure {{ A_SERVER }} and {{ CLUSTER }} Shared dir exisit
+  file:
+    state: directory
+    path: "{{ item }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: '750'
+  loop:
+    - "{{ A_SERVER }}"
+    - "{{ CLUSTER }}"
+
+- name: EFS | Create Access point for Admin Server
+  cloudformation:
+    stack_name: "{{ efs_stack_name_aserver }}"
+    state: "present"
+    region: "{{ aws_region }}"
+    disable_rollback: true
+    template: "{{ role_path }}/../../CloudFormation/efs_accesspoint.yml"
+    template_parameters:
+      FileSystemID: "{{ oracle_aserver_efs_fs_id }}"
+      UserId: "{{ oracle_user_id }}"
+      GroupId: "{{ oracle_install_group_id }}"
+      SecondaryGroupIds: 0
+      FileSystemPath: "{{ oracle_aserver_efs_access_point_path }}"
+    profile: "{{ aws_profile }}"
+    tags:
+      Stack: "ansible-cloudformation"
+  run_once: yes
+  become: no
+  register: efs_aserver_out
+  delegate_to: 127.0.0.1
+  tags:
+    - efs_cft
+    - efs_mount
+
+- name: EFS | Create Access point for cluster
+  cloudformation:
+    stack_name: "{{ efs_stack_name_cluster }}"
+    state: "present"
+    region: "{{ aws_region }}"
+    disable_rollback: true
+    template: "{{ role_path }}/../../CloudFormation/efs_accesspoint.yml"
+    template_parameters:
+      FileSystemID: "{{ oracle_cluster_efs_fs_id }}"
+      UserId: "{{ oracle_user_id }}"
+      GroupId: "{{ oracle_install_group_id }}"
+      SecondaryGroupIds: 0
+      FileSystemPath: "{{ oracle_cluster_efs_access_point_path }}"
+    profile: "{{ aws_profile }}"
+    tags:
+      Stack: "ansible-cloudformation"
+  run_once: yes
+  become: no
+  register: efs_cluster_out
+  delegate_to: 127.0.0.1
+  tags:
+    - efs_cft
+    - efs_mount
+
+- name: Ensure ASERVER EFS volume is mounted
+  mount:
+    name: "{{ A_SERVER }}"
+    src: "{{ oracle_aserver_efs_fs_id }}"
+    fstype: efs
+    opts: "tls,_netdev,accesspoint={{ efs_aserver_out.stack_outputs.AccessPointID }}"
+    state: mounted
+  tags:
+    - efs_mount
+
+- name: Ensure CLUSTER EFS volume is mounted
+  mount:
+    name: "{{ CLUSTER }}"
+    src: "{{ oracle_cluster_efs_fs_id }}"
+    fstype: efs
+    opts: "tls,_netdev,accesspoint={{ efs_cluster_out.stack_outputs.AccessPointID }}"
+    state: mounted
+  tags:
+    - efs_mount
+
+- name: Grant oracle user full access on the shared fs
+  file:
+    path: "{{ item }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_install_group_name }}"
+    mode: "0775"
+    recurse: yes
+  loop:
+    - "{{ A_SERVER }}"
+    - "{{ CLUSTER }}"
+  tags:
+    - efs_mount

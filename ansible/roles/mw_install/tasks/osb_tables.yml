@@ -1,0 +1,41 @@
+#User Precheck
+- name: "Check the {{ osb_log_user }} user exist ?"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_HOST_NAME }}:{{ DB_PORT }}/{{ DB_NAME }} <<< "SELECT * FROM ALL_USERS WHERE USERNAME='{{ osb_log_user | upper }}';"
+  register: osb_log_user_check
+#  no_log: True
+
+- name: "Create {{ osb_log_user }} user if not exist ?"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_HOST_NAME }}:{{ DB_PORT }}/{{ DB_NAME }} <<< "CREATE USER {{ osb_log_user }} IDENTIFIED BY {{ osb_log_user_password }} DEFAULT TABLESPACE {{ DB_TABLESPACE }} QUOTA 20M ON {{ DB_TABLESPACE }};"
+  when: osb_log_user | upper not in osb_log_user_check.stdout
+#  no_log: True
+
+- name: "ALTER {{ osb_log_user }} user if exist"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_HOST_NAME }}:{{ DB_PORT }}/{{ DB_NAME }} <<< "{{ item }}"
+  when: osb_log_user | upper in osb_log_user_check.stdout
+  loop:
+    - "ALTER USER {{ osb_log_user }} IDENTIFIED BY {{ osb_log_user_password }} DEFAULT TABLESPACE {{ DB_TABLESPACE }} QUOTA 20M ON {{ DB_TABLESPACE }};"
+    - "GRANT CREATE SESSION TO {{ osb_log_user }};"
+#  no_log: True
+
+- name: copy osm sql scripts to {{ SCRIPT_HOME }}
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ SCRIPT_HOME }}/{{ item.dest }}"
+    mode: '0775'
+  loop:
+    - { src: osb_tables.sql.j2, dest: osb_tables.sql } 
+
+- name: "Grants using admin user to {{ osb_log_user }}"
+  shell: |
+    export ORACLE_HOME={{ ORACLE_CLIENT_HOME }}; export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus {{ SYSDB_USER }}/{{ DB_PASSWORD }}@{{ DB_HOST_NAME }}:{{ DB_PORT }}/{{ DB_NAME }} @{{ SCRIPT_HOME }}/osb_tables.sql | tee {{ LOGS_DIR }}/osb_tables.log
+#  no_log: True
+  register: osb_tables_log
+
+- debug: var=osb_tables_log.stdout_lines

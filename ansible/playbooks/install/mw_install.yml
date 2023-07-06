@@ -1,0 +1,10 @@
+---
+- hosts: "{{ MW_HOSTS }}"
+  pre_tasks:
+    - name: "Verify we meet the minimum ansible version ..."
+      assert:
+        that: "ansible_version.full is version_compare('2.7', '>=')"
+        msg: >
+          "This will only work with ansible version 2.7 and above. Sorry ... "
+  roles:
+    - mw_install

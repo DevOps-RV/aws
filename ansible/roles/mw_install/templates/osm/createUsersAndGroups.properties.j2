@@ -1,0 +1,23 @@
+domain.name={{ DOMAIN_NAME }}
+admin.url=t3://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}
+admin.userName={{ WEBLOGIC_USERNAME }}
+admin.password={{ WEBLOGIC_PASSWORD }}
+
+security.realmName=myrealm
+
+total.groups=1
+total.username=2
+
+create.group.name.1=group1
+create.group.membership.1=Administrators
+create.group.description.1=Group1
+
+create.user.name.1=User1
+#create.user.password.1=
+create.user.description.1=User1
+create.user.groups.1=OSM_automation,OMS_ws_api,OMS_xml_api,OMS_client
+
+create.user.name.2=User2
+#create.user.password.2=
+create.user.description.2=User2
+create.user.groups.2=Monitors

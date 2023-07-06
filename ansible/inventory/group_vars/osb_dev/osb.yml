@@ -1,0 +1,30 @@
+#MW
+ENV: DEV
+DOMAIN_NAME: osb_domain_01
+CLUSTER_NAME: osb_cluster
+LOCAL_LOAD_BALANCER: 
+ASXMXXMS: 2
+MSXMXXMS: 4
+
+#OSB DB
+DB_HOST_NAME: 
+DB_NAME: 
+RCU_SCHEMA_PREFIX: OSB
+DB_TABLESPACE: OSB
+DB_USER: admin
+osb_log_user: OSBLOG
+
+
+aws_region: us-east-2
+aws_profile: aws-dev
+oracle_aserver_efs_fs_id: fs-12345
+oracle_cluster_efs_fs_id: fs-12345
+
+#AppD
+appdynamics:
+  applicationName: dev
+  tierName: osb
+app_agent: 'true'
+machine_agent: 'true'
+controller_env: nonprod
+region: oh

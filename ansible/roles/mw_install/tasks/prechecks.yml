@@ -1,0 +1,77 @@
+---
+- name: Verify User Allow Group {{ USER_ALLOW_GROUP }} is present
+  shell: getent group "{{ USER_ALLOW_GROUP }}"
+  register: USER_GROUP_RESULT
+
+- name: Verify Admin Allow Group {{ ADMIN_ALLOW_GROUP }} is present
+  shell: getent group "{{ ADMIN_ALLOW_GROUP }}"
+  register: ADMIN_GROUP_RESULT
+
+- name: User Group and Oracle Execute Permissions
+  shell: grep oracle /etc/sudoers.d/ansible_ldap_integration_base
+  become: yes
+  register: EXECUTE_PERMISSIONS
+
+- name: verify etc/hosts
+  shell: cat /etc/hosts
+  register: ehosts
+
+- name: Check /opt/app mount size
+  shell: df -h /opt/app | awk 'NR==2{print $2}'
+  register: APP_SIZE
+
+- name: Check /opt/appd mount size
+  shell: df -h /opt/appd | awk 'NR==2{print $2}'
+  register: APPD_SIZE
+
+- name: get availability-zone
+  shell: curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone/
+  register: az
+
+- name: Print All The Variables
+  vars:
+   msg: |
+    -------------------------- ########### --------------------------
+    -------------------------- SERVER INFO --------------------------
+    FQDN              : {{ ansible_fqdn }}
+    Hostname          : {{ ansible_hostname }}
+    Availability Zone : {{ az.stdout }}
+    IPv4              : {{ ansible_default_ipv4.address }}
+    OS Type           : {{ ansible_distribution }}
+    Release           : {{ ansible_distribution_release }}
+    OS Version        : {{ ansible_distribution_version }}
+    Kernel            : {{ ansible_kernel }}
+    Architecture      : {{ ansible_architecture }}
+    CPU's             : {{ ansible_processor_vcpus }}
+    RAM               : {{ ansible_memtotal_mb }} MB
+    SWAP              : {{ ansible_memory_mb.swap.total }} MB
+    -------------------------- Mounts INFO --------------------------
+    app size          : {{ APP_SIZE.stdout }}
+    appd size         : {{ APPD_SIZE.stdout }}
+    -------------------------- SERVER ACCESS -------------------------
+    USER GROUP        : {{ USER_GROUP_RESULT.stdout }}
+    ADMIN GROUP       : {{ ADMIN_GROUP_RESULT.stdout }}
+    ----------------------- EXECUTE PERMISSIONS -----------------------
+    {{ EXECUTE_PERMISSIONS.stdout }}
+
+  debug:
+   msg: "{{ msg.split('\n') }}"
+
+- name: Fail if conditions are not met
+  fail:
+    msg: "{{ item.msg }}"
+  when: "{{ item.when }}"
+  loop:
+    - { msg: "SWAP Memory < {{ SWAP }}  MB", when: "ansible_memory_mb.swap.total|int < {{ SWAP }}|int" }
+    - { msg: "RAM < {{ RAM }}", when: "ansible_memtotal_mb|int < {{ RAM }}|int" }
+    - { msg: "CPU < {{ CPU }}", when: "ansible_processor_vcpus|int < {{ CPU }}|int" }
+    - { msg: "OS != RedHat", when: ansible_distribution != 'RedHat' }
+    - { msg: "OS Version != 7.9", when: "{{ ansible_facts['distribution_version'] is version('7.9', '<') }}" }
+    - { msg: "no fqdn in /etc/hosts", when: ansible_fqdn not in ehosts.stdout }
+    - { msg: "no hostname in /etc/hosts", when: ansible_hostname not in ehosts.stdout }
+    - { msg: "no ipv4 in /etc/hosts", when: ansible_default_ipv4.address not in ehosts.stdout }
+    - { msg: "no localhost in /etc/hosts", when: "'localhost' not in ehosts.stdout" }
+    - { msg: "{{ ADMIN_ALLOW_GROUP }} is not present in sshd_config", when: ADMIN_GROUP_RESULT.stdout == "" }
+    - { msg: "{{ USER_ALLOW_GROUP }} is not present in sshd_config", when: USER_GROUP_RESULT.stdout == "" }
+    - { msg: "/opt/appd no mount or low disk size", when: "APPD_SIZE.stdout.split('G')[0]|int < 5" }
+    - { msg: "/opt/app mount low disk size", when: "APP_SIZE.stdout.split('G')[0]|int < 40" }

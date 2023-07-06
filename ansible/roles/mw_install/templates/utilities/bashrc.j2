@@ -1,0 +1,31 @@
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+# Uncomment the following line if you don't like systemctl's auto-paging feature:
+# export SYSTEMD_PAGER=
+
+# User specific aliases and functions
+
+#Managed
+alias alog='cd {{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/logs'
+alias mlog='cd {{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs'
+alias startNM='nohup {{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/startNodeManager.sh &'
+alias stopNM='nohup {{ M_SERVER }}/{{ DOMAIN_NAME }}/bin/stopNodeManager.sh &'
+alias wlspath='{{ ORACLE_HOME }}/wlserver/server/bin/'
+alias setWLSEnv='source {{ ORACLE_HOME }}/wlserver/server/bin/setWLSEnv.sh'
+alias mthreaddump='sh {{ ORACLE_PATH }}/scripts/Threaddump.sh'
+alias mheapdump='sh {{ ORACLE_PATH }}/scripts/Heapdump.sh'
+
+
+{%- if groups[MW_HOSTS].index(inventory_hostname) == 0 %}
+
+#Admin
+alias sstatus='sh {{ ORACLE_PATH }}/scripts/serverstatus.sh'
+alias startWL='nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/startWebLogic.sh &'
+alias stopWL='nohup {{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/stopWebLogic.sh &'
+
+{% endif %}

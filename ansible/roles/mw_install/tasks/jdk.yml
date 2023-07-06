@@ -1,0 +1,36 @@
+---
+# tasks file for jdk - Download JDK, Unarchive and link
+
+- name: create {{ ORACLE_PATH }} directory
+  file:
+    path: "{{ item }}"
+    state: "directory"
+    owner: oracle
+    group: oinstall
+    mode: '775'
+    recurse: yes
+  loop:
+    - "{{ ORACLE_PATH }}"
+
+- name: unarchive jdk tar file to /opt/oracle directory
+  unarchive:
+    src: "{{ ARTIFACTORY_URL }}/{{ MW_VERSION }}/{{ JDK_TAR }}"
+    dest: "{{ ORACLE_PATH }}"
+    mode: '775'
+    owner: oracle
+    group: oinstall
+    remote_src: yes
+
+- name: Create soft link for jdk
+  file:
+    src: "{{ ORACLE_PATH }}/{{ JDK_VERSION }}"
+    dest: "{{ ORACLE_PATH }}/jdk"
+    state: link
+
+- name: check java version
+  shell: |
+    export JAVA_HOME={{ ORACLE_PATH }}/jdk;
+    export PATH={{ JAVA_HOME }}/bin:$PATH;
+    java -version
+  register: java_version
+- debug: var=java_version.stderr_lines

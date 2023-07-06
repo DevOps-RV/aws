@@ -1,0 +1,24 @@
+#!/bin/bash
+
+TIMESTAMP=`date +%Y-%m-%d_%H-%M-%S`
+rotate_log_path={{ ORACLE_PATH }}/scripts/logs
+[ -d $rotate_log_path ] || mkdir $rotate_log_path
+
+
+mlog={{ M_SERVER }}/{{ DOMAIN_NAME }}/servers/{{ SUITE }}_MS{{ groups[MW_HOSTS].index(inventory_hostname) | int + 1 }}/logs
+mlog_files=$(cd $mlog; find $mlog -iname "*.log*" -o -iname "*.out*" -type f -mtime +30)
+echo "#### Managed Logs ####" > $rotate_log_path/logRotation_$TIMESTAMP.log
+echo $mlog_files >> $rotate_log_path/logRotation_$TIMESTAMP.log
+
+find $mlog -iname "*.log*" -o -iname "*.out*" -type f -mtime +30  -delete
+
+{%- if groups[MW_HOSTS].index(inventory_hostname) == 0 %}
+
+alog={{ A_SERVER }}/{{ DOMAIN_NAME }}/servers/AdminServer/logs
+alog_files=$(cd $alog; find $alog -iname "*.log*" -o -iname "*.out*" -type f -mtime +30)
+echo "#### Admin Logs ####" >> $rotate_log_path/logRotation_$TIMESTAMP.log
+echo $alog_files >> $rotate_log_path/logRotation_$TIMESTAMP.log
+
+find $alog -iname "*.log*" -o -iname "*.out*" -type f -mtime +30  -delete
+
+{% endif %}

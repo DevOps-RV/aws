@@ -1,0 +1,9 @@
+#!/bin/bash
+
+source "{{ A_SERVER }}/{{ DOMAIN_NAME }}/bin/setDomainEnv.sh"
+java weblogic.WLST /opt/scripts/purgeQueues.py
+
+From="Queues-PurgeStatus@dontreply.com"
+To="emaildistro.com"
+
+mail -s "{{ ENV }} {{ SUITE }} JMS Queues purge status" -r $From $To < /opt/scripts/purge-status.log

@@ -1,0 +1,8 @@
+{{ siebel_datasource_name }} =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = {{ siebel_db_host }})(PORT = {{ siebel_db_port }}))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SID = {{ siebel_db_endpoint }})
+    )
+  )

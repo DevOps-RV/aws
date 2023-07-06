@@ -1,0 +1,37 @@
+---
+#Check Vars for Admin Server Domian Installlation
+- name: Print All The Variables
+  vars:
+   msg: |
+    ------------------------ INSTALLATION INFO ------------------------
+    SUITE                 : {{ SUITE }}
+    ENVIRONMENT           : {{ ENV }}
+    ORACLE PATH           : {{ ORACLE_PATH }}
+    JAVA_HOME             : {{ JAVA_HOME }}
+    ORACLE BACKUP MOUNT   : {{ BACKUP_PATH }}
+    SCRIPT HOME           : {{ SCRIPT_HOME }}
+    ORACLE HOME           : {{ ORACLE_HOME }}
+    DOMAIN_HOME           : {{ DOMAIN_HOME }}
+    INSTALLATION LOGS DIR : {{ LOGS_DIR }}
+    OPATCH HOME           : {{ OPATCH_HOME }}
+    MEDIA ORABIN MOUNT    : {{ ORABIN_PATH }}
+    DEPENDENCY FILES PATH : {{ ORABIN_PATH }}/{{ MW_VERSION }}
+    DB NAME               : {{ DB_NAME }}
+    DB HOSTNAME           : {{ DB_HOST_NAME }}
+    DB PORT               : {{ DB_PORT }}
+    DOMAIN NAME           : {{ DOMAIN_NAME }}
+    RCU SCHEMA PREFIX     : {{ RCU_SCHEMA_PREFIX }}
+    CLUSTER NAME          : {{ CLUSTER_NAME }}
+    ADMIN AND MS1 HOSTNAME: {{ groups[MW_HOSTS][0] }}
+    DOMAIN MOUNT POINT    : {{ DOMAIN_MOUNT_POINT }}
+    ADMIN SERVER PATH     : {{ A_SERVER }}
+    MANAGED SERVER PATH   : {{ M_SERVER }}
+    DOMAIN CLUSTER PATH   : {{ CLUSTER }}
+    ADMIN SERVER PORT     : {{ MW_ADMIN_PORT }}
+    MANAGED SERVER PORT   : {{ MS_PORT }}
+    LOCAL LOAD BALANCER   : {{ LOCAL_LOAD_BALANCER }}
+    Admin Xms and Xmx     : {{ ASXMXXMS }} GB
+    Managed Xms and Xmx   : {{ MSXMXXMS }} GB
+  debug:
+   msg: "{{ msg.split('\n') }}"
+  run_once: true

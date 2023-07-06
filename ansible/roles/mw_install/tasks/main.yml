@@ -1,0 +1,81 @@
+---  
+- name: Prechecks
+  import_tasks: prechecks.yml
+  ignore_errors: True
+  tags: prechecks
+
+- import_tasks: check_vars.yml
+  run_once: yes
+  tags: check_vars
+
+- name: prereqs
+  import_tasks: prereqs.yml
+  tags: prereqs
+
+- name: Binaries Install on all nodes
+  import_tasks: binary_install.yml
+  become_user: oracle
+  tags: binary_install
+
+- name: Apply Patches after binary installation
+  import_tasks: patching.yml
+  become_user: oracle
+  tags: patch
+
+- name: MW | RCU, DOMAIN, Start
+  import_tasks: rcu_domain_install.yml
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: yes
+  become_user: oracle
+
+- name: AIA | Configirations
+  import_tasks: aia_configuration.yml
+  when: SUITE == "AIA"
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: yes
+  become_user: oracle
+  tags: aia_configuration
+
+- name: Pack Domain
+  import_tasks: pack.yml
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: yes
+  become_user: oracle
+  tags: pack
+
+- name: Managed Servers Unpack and Start
+  import_tasks: ms_unpack.yml
+  become_user: oracle
+  tags: ms_unpack
+
+- name: MW | Post install - Splunk
+  import_tasks: mw_post_install.yml
+  tags: mw_post_install
+  
+- name: OSM | Import osm when suite is osm
+  import_tasks: osm_install.yml
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: yes
+  when: SUITE == "OSM"
+  become_user: oracle
+  tags: osm_install
+
+- name: OSM | Post install Configuration
+  import_tasks: osm_post_install.yml
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: yes
+  when: SUITE == "OSM"
+  become_user: oracle
+  tags: osm_post_install
+
+- name: mw_utilities
+  import_tasks: mw_utilities.yml
+  become_user: oracle
+  tags: [app_restart,mw_post_install,osm_install,osm_post_install]
+
+- name: backup domain
+  import_tasks: domain_backup.yml
+  become_user: oracle
+  delegate_to: "{{ groups[MW_HOSTS][0] }}"
+  run_once: yes
+  tags: domain_backup

@@ -1,0 +1,15 @@
+import sys
+import os
+connect('{{ WEBLOGIC_USERNAME }}', '{{ WEBLOGIC_PASSWORD }}', 't3://{{ groups[MW_HOSTS][0] }}:{{ MW_ADMIN_PORT }}')
+status=StringBuffer("****\n")
+serverNames = cmo.getServers()
+domainRuntime()
+for name in serverNames:
+        cd("/ServerLifeCycleRuntimes/" + name.getName())
+        status=status.append(cmo.getName() + "\t" + cmo.getState() + "\n")
+op = open("/opt/oracle/scripts/status.log","w")
+print >> op, status
+sys.exit(0)
+disconnect()
+exit()
+

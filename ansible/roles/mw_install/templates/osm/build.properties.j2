@@ -1,0 +1,296 @@
+#########################################################################################################
+#  Copyright right 2015, 2016 Oracle Inc.
+#
+#  O2A Headless build propertie file 
+# 
+#########################################################################################################
+
+#########################################################################################################
+# Require SDK, JDK, Weblogic Home and Studio Home setting
+#########################################################################################################
+
+# OSM SDK Home Directory
+osm.sdk.home={{ ORACLE_PATH }}/osm/SDK
+
+# JDK Home Directory
+jdk.home={{ JAVA_HOME }}
+
+# Web Logic Server Home Directory
+weblogic.home={{ ORACLE_HOME }}/wlserver
+
+# Fusion Middleward  Home Directory
+oracle.middleware.home={{ ORACLE_HOME }}
+	
+# Design Studio Home Directory (Note, Windows Path use \\ and linux use /)
+studio.home={{ DESIGN_STUDIO_HOME }}
+
+# ANT (ver 1.8.4 or up) Home Directory
+ant.home={{ ANT_HOME }}
+
+#########################################################################################################
+# O2A Users password setting 
+# Note: Important. This must be done before the headless can process.
+# 
+# All password need to be encrypted and save in a file to be used by headless build.
+# Use the following ant command target to create the encrypted password file:
+#
+# For AdminServer admin user's encrypted password use 
+# 	create-osm-admin-server-xmlie-encrypted-password-properties-file
+#
+# For O2A COM and SOM user's encrypted password use 
+#	create-comsom-encrypted-password-properties-file
+#
+# For UIM user's encrypted password use 
+# 	create-uim-encrypted-password-properties-file
+#
+# For TOM user's encrypted password use 
+# 	create-tom-encrypted-password-properties-file
+# 
+# For SCE Admin user's encrypted password use 
+# 	create-cmt-encrypted-password-properties-file
+#
+# Foe creating AIA Emulator server, the Domain Admain user's encrypted password use 
+# 	create-aia-admin-server-xmlie-encrypted-password-properties-file
+#
+# For all COM/SOM/UIM/TOM user entry in AIA Emulator server 
+# (Used by SAF and Webservice to O2A from AIA Emulator) use
+# 	create-aiaemulators-encrypted-password-properties-file
+#
+# Example Usage:
+#	ant create-osm-admin-server-xmlie-encrypted-password-properties-file	
+#########################################################################################################
+
+
+#########################################################################################################
+# Solution Import Control setting 
+#########################################################################################################
+
+# Import CSO type or Non-CSO type solution
+# y - import CSO type solution 
+# n - import Non-CSO type solution 
+o2a.cso.type=n
+
+# Import CSO COM only or CSO SOM only or CSO COMSOM together solution
+# This parameter is only in used when o2a.cso.type=y 
+# [y.t.a | y.s.a | y.c.a] - COMSOM together solution
+# [y.t.c | y.s.c | y.c.c] - COM Only solution
+# [y.t.s | y.s.s | y.c.s] - SOM Only solution
+o2a.solution.type=y.t.a
+
+# Topology type (Typical or Simple) plus Aarchitecture type (Cluster or Standalone)
+# c.c - COM only, Complex topology
+# c.t - COM only, Typical topology
+# c.s - COM only, Simple topology
+# s.c - SOM only, Complex topology
+# s.t - SOM only, Typical topology
+# s.s - SOM only, Simple topology
+# a.c - COMSOM together, Complex topology
+# a.t - COMSOM together, Typical topology
+# a.s - COMSOM together, Simple topology
+o2a.topology.deployment.type=a.t
+
+# Import Non-CSO COM only or Non-CSO SOM only or Non-CSO COMSOM together solution with ot without New product type
+# This parameter is only in used when o2a.cso.type=n 
+# [c.c.o | c.t.o] - COM only typical solution with legacy product class
+# [c.s.o] - COM only simple solution with legacy product class
+# [a.c.o | a.t.o] - COMSOM together typical solution with legacy product class
+# [a.c.n | a.t.n] - COMSOM together typical solution with CSO product type
+# [c.c.n | c.t.n] - COM only typical solution with CSO product type
+# [c.s.n] - COM only simple solution with CSO product type		
+# [a.s.o] - COMSOM together simple solution with legacy product class
+# [a.s.n] - COMSOM together simple solution with CSO product type
+# [s.c.o | s.t.o | s.s.o] - SOM only solution with legacy product class
+# [s.c.n | s.t.n | s.s.n] - SOM only solution with CSO product type
+o2a.topology.deployment.product.type=a.t.n
+
+
+#########################################################################################################
+# Admin Server Info and Admin credential setting
+#########################################################################################################
+
+# Admin Server user name
+weblogic.admin.user.name=security/osmAdminConfigFile.secure
+
+# Admin Server user password
+weblogic.admin.user.password=security/osmAdminKeyFile.secure
+
+# Admin Server host name
+weblogic.admin.server.host={{ inventory_hostname }}
+
+# Admin Server host port number
+weblogic.admin.server.port={{ MW_ADMIN_PORT }}
+
+# Deloyment target (Cluster name or Managed Server name)
+osm.server.name={{ CLUSTER_NAME }}
+
+
+#########################################################################################################
+# O2A Solution Configuration setting
+#########################################################################################################
+
+# O2A cartridge three digit release version used for cartridge migration
+o2a.release.version=2.1.0
+
+# architecture describe the OSM architecture is a cluster or Standalone server
+# bridge control how to config the JMS resource.
+# s.n - Standalone, AIA facing queue is created as local queue.
+# c.n - Cluster, AIA facing queue is created as local queue.
+# s.s - Standalone, AIA facing queue is created as import SAF queue.
+# c.s - Cluster,  AIA facing queue is created as import SAF queue.
+o2a.architecture.bridge.type=c.s
+		
+# Deploy the emulators
+# d - deploy
+# n - Skip deploy
+o2a.deploy.emulators.mode=n
+
+###########################################################################################################
+# Fulfillment Complex Topology options.
+# Both topology.type and complex.topology.options are used together to config the topology type for cso
+###########################################################################################################
+# Topology type, complex, typical and simple
+# s = Simple Topology type. Apply to cso only. (Note: when set complex.topology.options must be set to x) 
+# t = Typical Topology type. Apply to cso only. (Note: when set complex.topology.options must be set to x)
+# c = Complex Topology type. Apply to cso only.
+topology.type=t
+
+# Fulfillment Complex Topology options.
+# x = Nothing, topolog is controled by topology.type, for both cso and noe-cso
+# s = Multiple (Billing/Provisioning) single (Install/Shipping). Apply to cso only.
+# m = Multiple (Billing/Provisioning/Install/Shipping). Apply to cso only.
+# n = Multiple (Billing/Provisioning/Shipping) single (Install). Apply to cso only.
+# p = Multiple Billing/Provisioning/Install) single (Shipping). Apply to cso only.
+complex.topology.options=x
+
+#########################################################################################################
+# O2A Solution Deployment setting
+#########################################################################################################
+# sce.admin.user=sceadmin
+# sce.admin.password=encrypted_password_required
+
+# OSM Server host and port info for deploying OSM cartridge 
+# It is the Proxy Server for Cluster. 
+# If is not Cluster, then is the server where OSM application is deployed to
+osm.deployment.server.host={{ inventory_hostname }}
+osm.deployment.server.port={{ MW_ADMIN_PORT }}
+
+##########################################################################################################
+# AIA Emulator server AIA to COM/SOM SAF Setting
+# Here com user/password and som user and pass
+# Note: solution.com.saf.serverURLs is the same as solution.som.saf.serverURLs if
+# both COM and SOM is deployed to the same OSM Cluster/Server
+##########################################################################################################
+
+# OSM COM Cluster/Server host:port list, used by AIA emulators to setup SAFRemoteContext to send message from AIA emulator server to COM
+solution.com.saf.serverURLs={{ aia_saf_urls }}
+
+# OSM SOM Cluster/Server host:port list, used by AIA emulators to setup SAFRemoteContext to send message from AIA emulator server to SOM
+solution.som.saf.serverURLs={{ aia_saf_urls }}
+
+$ AIA Emulator Server Admin user name
+bea.aia.user=security/aiaAdminConfigFile.secure
+
+$ AIA Emulator Server Admin user password
+bea.aia.password=security/aiaAdminKeyFile.secure
+
+$ AIA Emulator Server Admin host
+bea.aia.host={{ aia_admin_host }}
+
+$ AIA Emulator Server Admin port
+bea.aia.port={{ MW_ADMIN_PORT }}
+
+#$ AIA Emulator Managed Server Name
+aia.server.name={{ aia_ms_hosts }}
+
+# COM user osm's password for AIA to COM SAF opening JMS connection
+# A encrypted password is required here and that must be encrypted under the AIA Domain
+solution.com.saf.password={{ osm_admin_password }}
+
+# SOM user osmlf's password for AIA to SOM SAF opening JMS connection
+# A encrypted password is required here and that must be encrypted under the AIA Domain
+solution.som.saf.password={{ osm_admin_password }}
+
+##########################################################################################################
+# SAF Deployment target name for COM, SOM, UIM and TOM
+# 1. If COMSOM is the same instance, then deployment target for both COM and SOM SAF to AIA, 
+#    SOM SAF to UIM and SOM SAF to TOM is the same and is solution.com.deploymentTarget.
+# 2. If COM and SOM is different instance, then deployment target for COM SAF to AIA is
+#    solution.com.deploymentTarget, deployment target for SOM SAF to AIA, SOM SAF to UIM and SOM SAF to
+#    TOM is  solution.som.deploymentTarget
+##########################################################################################################
+# COM cluster/server name where COM to XYZ SAF is going to be deployed
+solution.com.deploymentTarget={{ CLUSTER_NAME }}
+
+# SOM cluster/server name where SOM to XYZ SAF is going to be deployed
+solution.som.deploymentTarget={{ CLUSTER_NAME }}
+
+##########################################################################################################
+# OSM to AIA SAF Setting
+##########################################################################################################
+# AIA user name for COM/SOM to AIA SAF opening JMS connection
+solution.saf.userName={{ WEBLOGIC_USERNAME }}
+# AIA user password for COM/SOM to AIA SAF opening JMS connection
+# A encrypted password is required here and that must be encrypted under the COM or SOM Domain
+solution.saf.password={{ AIA_WEBLOGIC_ENCRYPT_PASSWORD.stdout }}
+
+# AIA server URL(s), 
+# When AIA server is a cluster, the format is managed_server1_host:port,managed_server2_host:port
+solution.saf.serverURLs={{ aia_ms_hosts }}
+
+##########################################################################################################
+# OSM to UIM SAF Setting
+##########################################################################################################
+# CSO SOM UIM facing JMS resource architecture type (Cluster or Standalone)
+# s.n - Standalone, UIM facing queue is created as local queue
+# c.n - Cluster, UIM facing queue is created as local queue
+# s.s - Standalone, UIM facing queue is created as import SAF queue
+# c.s - Cluster, UIM facing queue is created as import SAF queue
+# s.x - Standalone, UIM facing queue is not created. 
+# c.x - Cluster, UIM facing queue is not created.
+#
+# Note: this first letter of this must match the first letter of o2a.architecture.bridge.type for SOM.
+# Since these queue is create at the same SOM instance, so if SOM queue is created for cluster then these queue must also be created for cluster.
+o2a.som.cso.inv.architecture.bridge.type=c.x
+
+# Deploy UIM emulators to local OSM instance (set to d when o2a.som.cso.inv.architecture.bridge.type is s.n or c.n, otherwise set to n)
+o2a.som.cso.inv.mdb.mode=n
+
+# UIM user name for SOM to UIM SAF opening JMS connection
+solution.uim.saf.userName={{ WEBLOGIC_USERNAME }}
+
+# UIM user password for SOM to UIM SAF opening JMS connection
+# An encrypted password is required here and that must be encrypted under the SOM only or COMSOM together Domain
+solution.uim.saf.password={{ AIA_WEBLOGIC_ENCRYPT_PASSWORD.stdout }}
+
+# UIM server URL(s)
+# When AIA server is a cluster, the format is managed_server1_host:port,managed_server2_host:port
+solution.uim.saf.serverURLs={{ aia_ms_hosts }}
+
+##########################################################################################################
+# OSM to TOM SAF Setting
+##########################################################################################################
+# CSO SOM TOM facing JMS resource architecture type (Cluster or Standalone)
+# s.n - Standalone, TOM facing queue is created as local queue
+# c.n - Cluster, TOM facing queue is created as local queue
+# s.s - Standalone, TOM facing queue is created as import SAF queue
+# c.s - Cluster, TOM facing queue is created as import SAF queue
+# s.x - Standalone, TOM facing queue is not created. 
+# c.x - Cluster, TOM facing queue is not created.
+#
+# Note: this first letter of this must match the first letter of o2a.architecture.bridge.type for SOM.
+# Since these queue is create at the same SOM instance, so if SOM queue is created for cluster then these queue must also be created for cluster.
+o2a.som.cso.tom.architecture.bridge.type=c.x
+
+# Deploy TOM emulators to local OSM instance (set to d when o2a.som.cso.tom.architecture.bridge.type is s.n or c.n, otherwise set to n)
+o2a.som.cso.tom.mdb.mode=n
+
+# TOM user name for SOM to TOM SAF opening JMS connection
+solution.tom.saf.userName={{ WEBLOGIC_USERNAME }}
+
+# TOM user password for SOM to TOM SAF opening JMS connection
+# An encrypted password is required here and that must be encrypted under the SOM only or COMSOM together Domain
+solution.tom.saf.password={{ AIA_WEBLOGIC_ENCRYPT_PASSWORD.stdout }}
+
+# TOM server URL(s)
+# When AIA server is a cluster, the format is managed_server1_host:port,managed_server2_host:port
+solution.tom.saf.serverURLs={{ aia_ms_hosts }}
