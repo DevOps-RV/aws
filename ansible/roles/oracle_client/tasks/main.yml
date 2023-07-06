@@ -65,18 +65,18 @@
   retries: 100
   delay: 10
 
-- name: cleanup old extracts
-  ansible.builtin.file:
-    path: "{{ oracle_client_download_dir }}/client32"
-    state: absent
-  loop:
-    - "{{ oracle_client_zip_path }}"
-    - "{{ oracle_client_download_dir }}/client32"
+# - name: cleanup old extracts
+#   ansible.builtin.file:
+#     path: "{{ oracle_client_download_dir }}/client32"
+#     state: absent
+#   loop:
+#     - "{{ oracle_client_zip_path }}"
+#     - "{{ oracle_client_download_dir }}/client32"
     
-- name: Download oracle client for linux zip file
-  shell: "wget --continue --progress=dot:mega --tries=0 {{ oracle_client_32bit_download_url }} -O {{ oracle_client_zip_path }}"
-  tags: ora_clnt_dwnld
-  async: 1000
+# - name: Download oracle client for linux zip file
+#   shell: "wget --continue --progress=dot:mega --tries=0 {{ oracle_client_32bit_download_url }} -O {{ oracle_client_zip_path }}"
+#   tags: ora_clnt_dwnld
+#   async: 1000
 
 - name: Extract the downloaded oracle client archvie
   unarchive:
